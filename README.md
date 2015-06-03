@@ -1,7 +1,7 @@
 meta4node - executable wireframe server
 =======================================
 
-A lightweight server for meta4beta.
+A lightweight server for meta4beta written in NodeJS and ExpressJS.
 
 meta4beta helps you to quickly build fully working, interactive applications for web and mobile without (much) coding.
 
