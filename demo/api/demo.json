@@ -1,9 +1,8 @@
 {
   "swaggerVersion": "1.2",
-  "basePath": "demo",
   "apis": [
 	{
-	  "path": "/hello/{subject}",
+	  "path": "/hello",
 	  "operations": [
 		{
 		  "method": "GET",

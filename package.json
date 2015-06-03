@@ -20,9 +20,12 @@
   "author": "Troven <meta4@troven.com.au> (http://meta4beta.com/)",
   "license": "Apache",
   "dependencies": {
-    "tingodb": "0.3.4",
-    "express": "2.3.x",
-    "optimist": "0.2.x"
+    "tingodb": "~0.3.4",
+    "express": "~4.x.x",
+    "optimist": "0.2.x",
+    "underscore": "~1.8.3",
+    "body-parser": "~1.0.1"
+
   }
 
 }
