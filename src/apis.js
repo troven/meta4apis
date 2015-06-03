@@ -5,6 +5,8 @@ var exports = module.exports = {};
 
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
+var multer     = require('multer');         // multi-part form handler
+var assert     = require('assert');         // assert
 
 // =============================================================================
 // meta4 packages
@@ -18,10 +20,46 @@ var models      = require('./models');       // Models Controller
 exports.build = function(router, config, apiConfig) {
 
     var basePath = apiConfig.basePath || config.basePath
+
+    assert(basePath, "{{basePath}} is missing")
     console.log("[meta4node] API initialized:", basePath) // , config, "\n API: ", apiConfig
 
     // =============================================================================
-    // configure from Swagger API definition [work-in-progress]
+    // simple instrumentation / diagnostics
+
+    router.get('/about', function(req, res) {
+        res.json({ message: 'Welcome to '+config.name, basePath: basePath, apis: clientAPIs });
+    });
+
+    // =============================================================================
+    // multi-part file upload
+
+    var uploadDir = config.homeDir+"/"+config.paths.uploads
+    assert(config.paths.uploads, "{{uploads}} path is missing")
+    assert(config.features.upload, "{{upload}} feature not configured")
+
+    console.log("upload: ", config.features.upload, "->", uploadDir)
+
+    router.use(config.features.upload, multer({
+        limits: config.upload.limits,
+        dest: uploadDir,
+        rename: function (fieldname, filename) {
+//            fs.mkdirSync(uploadDir+"/"+fieldname)
+            return Date.now()+"_"+filename;
+        },
+        onFileUploadStart: function (file, req, res) {
+//            console.log(file.originalname + ' is starting ...')
+        },
+        onFileUploadComplete: function (file, req, res) {
+//            console.log(file.fieldname + ' uploaded to  ' + file.path)
+            delete file.path; // obfuscate local directory
+            res.json(file)
+        }
+    }));
+
+    // =============================================================================
+    // configure Swagger API definitions
+    // TODO: [work-in-progress]
 
     var clientAPIs = []
     apiConfig.apis.forEach(function(api) {
@@ -29,7 +67,6 @@ exports.build = function(router, config, apiConfig) {
         console.log("\t", basePath + api.path)
 
         // register each Swagger API path with router
-
         router.get(api.path, function(req, res) {
             res.json({ message: 'Welcome to '+basePath + api.path });
         });
@@ -38,18 +75,13 @@ exports.build = function(router, config, apiConfig) {
     })
 
     // =============================================================================
-    // simple instrumentation / diagnostics
-
-    router.get('/about', function(req, res) {
-        res.json({ message: 'Welcome to '+config.name, basePath: basePath, apis: apiConfig.apis });
-    });
-
-    // =============================================================================
     // dynamically build the UX definition
 
-    router.get('/ux', function(req, res) {
+    assert(config.features.ux, "{{ux}} feature not configured")
 
-        // NOTE: blocking I/O .. synchronous loading of recipe files
+    router.get(config.features.ux, function(req, res) {
+
+        // NOTE: blocking I/O .. for generation of recipe files
         var recipe = ux.build(config)
         recipe.url = req.protocol+"://"+req.hostname+":"+config.port
         recipe.basePath = basePath
@@ -61,22 +93,25 @@ exports.build = function(router, config, apiConfig) {
     // =============================================================================
     // dynamically route model / CRUD requests
 
-    router.use('/models/*', function(req, res) {
-        var id = req.params[0]
-        var file = config.homeDir+"/"+config.paths.models+"/"+id+".json"
+    assert(config.features.models, "{{models}} feature not configured")
+
+    router.use(config.features.models+'/*', function(req, res) {
+        var collection = req.params[0] // decode the wild-card
+        var file = config.homeDir+"/"+config.paths.models+"/"+collection+".json"
 
         // load model's meta-data
         fs.readFile(file, function(error, data) {
             if (!error) {
                 var meta = JSON.parse(data)
-                if (meta.id == id) {
+
+                // delegate the request, if collection meta-data concurs
+                if (meta.id == collection) {
                     meta.homeDir = config.homeDir+"/"+config.paths.data
-                    // delegate the request
                     return models.handle(req, res, meta, config)
                 }
             } else {
-                res.status = 500;
-                return res.send('unknown model: '+id);
+                res.status = 404;
+                return res.send('unknown collection: '+collection);
             }
         })
     });

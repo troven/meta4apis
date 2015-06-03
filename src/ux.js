@@ -42,34 +42,39 @@ exports.build = function(config) {
 
     _.each( found, function(data, file) {
         var model = JSON.parse(data)
+
         // only designated client models
         if (model.isClient) {
             model.id = model.id || path.basename(file, ".json")
             recipe.models[model.id] = model
         }
+
         model.url = model.url || config.basePath+config.features.models+"/"+model.id
 //        console.log("\tmodel: ", model.id, "@", model.url)
     })
 
     // =============================================================================
-    // load the Templates
+    // load the HTML Templates
 
     var templatesDir = config.homeDir+"/"+config.paths.templates
     found  = util.findFiles(templatesDir, AcceptHTML )
 
+    // add templates to recipe
     _.each( found, function(data, file) {
         var id = path.basename(file, ".html");
 //TODO: paths are being truncated
+
         // strip repetitive whitespace
         recipe.templates[id] = (""+data).replace(/\s+/g, ' ');
     })
 
     // =============================================================================
-    // load the client-side scripts
+    // load the client-side Scripts
 
     var scriptsDir = config.homeDir+"/"+config.paths.scripts
     found  = util.findFiles(scriptsDir, AcceptHTML )
 
+    // add scripts to recipe
     _.each( found, function(data, file) {
         var id = path.basename(file, ".js");
 //TODO: paths are being truncated

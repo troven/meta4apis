@@ -5,6 +5,7 @@
   "port": 9090,
 
   "paths": {
+    "uploads": "uploads",
 	"apis": "apis",
     "views": "views",
     "models": "models/meta",
@@ -12,6 +13,14 @@
     "scripts": "scripts",
     "templates": "templates/client",
 	"static": "public"
+  },
+
+  "upload": {
+    "limits": {
+      "fieldNameSize": 100,
+      "files": 2,
+      "fields": 5
+    }
   }
 
 }

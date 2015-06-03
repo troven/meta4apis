@@ -7,7 +7,6 @@ var BOOT_FILE = "/meta4.json"
 // framework packages
 
 var express    = require('express');        // call express
-var app        = express();                 // create app using express
 var vhost      = require('vhost');          // name-based virtual hosting
 var connect    = require('connect');        // 
 var bodyParser = require('body-parser');    // handle POST bodies
@@ -21,6 +20,11 @@ var _          = require('underscore');     // collections helper
 var util     = require('./util');           // utilities
 var apis     = require('./apis');           // API (route) builder
 var login    = require('./login');          // login
+
+// =============================================================================
+// web server initialization
+
+var app        = express();                 // create app using express
 
 // =============================================================================
 // support POST payloads
@@ -64,13 +68,16 @@ args.forEach(function(path) {
         router.use(passport.initialize());
         router.use(passport.session());
 
+        // =============================================================================
         // authentication
 
         app.post('/login', passport.authenticate('local',
             { successRedirect: '/', failureRedirect: '/login', failureFlash: true }
         ) );
 
+        // =============================================================================
         // app static files
+
         var staticPath = path+"/"+config.paths.static
         router.use('/static', express.static(staticPath));
 
@@ -96,10 +103,11 @@ args.forEach(function(path) {
         var apiFilename = path+"/"+config.paths.apis
         var files = util.findFiles(apiFilename)
 
-        // feature paths
+        // default feature paths
         config.features = config.features || {
             ux: "/ux",
-            models: "/models"
+            models: "/models",
+            upload: "/upload"
         }
 
         // build API routes
@@ -108,10 +116,11 @@ args.forEach(function(path) {
 
         })
 
-        // launch HTTP server
-        app.listen(config.port);
+        // start HTTP server
+        app.listen(config.port, function() {
+            // we're good to go ...
+            console.log('[meta4node] '+config.name+' listening on port ' + config.port);
+        });
 
-        // we're good to go ...
-        console.log('[meta4node] '+config.name+' listening on port ' + config.port);
     })
 })

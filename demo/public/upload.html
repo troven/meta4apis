@@ -10,16 +10,12 @@
 
     <title>meta4beta</title>
 
-    <link href="js/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" type="text/css" >
-    <link href="js/vendor/bootstrap-dialog/bootstrap-dialog.css" rel="stylesheet" type="text/css" />
-
 </head>
 
 <body>
-<div id="home"/>
-
-<script src="js/vendor/require.js"></script>
-<script src="index.js"></script>
-
+    <form method="POST" action="../upload" enctype="multipart/form-data">
+        <input type="file" name="filename" value=""/>
+        <input type="submit" value="upload">
+    </form>
 </body>
 </html>
