@@ -11,8 +11,9 @@ var _          = require('underscore');     // collections helper
 
 exports.handle = function(req, res, meta, meta4) {
 
-    var db = require("./store/"+meta.store)
-    db.handle(req, res, meta, meta4)
+    // dynamic delegation to a CRUD proxy
+    var crud = require("./crud/"+meta.store)
 
+    crud.handle(req, res, meta, meta4)
 
 }

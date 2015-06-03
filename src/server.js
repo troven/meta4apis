@@ -11,6 +11,7 @@ var vhost      = require('vhost');          // name-based virtual hosting
 var connect    = require('connect');        // 
 var bodyParser = require('body-parser');    // handle POST bodies
 var passport   = require('passport');       // passport
+var assert     = require('assert');         // assertions
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 
@@ -32,9 +33,6 @@ var app        = express();                 // create app using express
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-
-console.log("Home: ",__dirname)
-
 // =============================================================================
 // instantiate runtime
 
@@ -51,10 +49,23 @@ args.forEach(function(path) {
 
         // boot configuration
         var config = JSON.parse(data);
-        config.port = config.port || data.process.env.PORT || 8080; // set our port
-        var apiRoot = config.basePath || "/"+config.name         // set API base path - defaults to App name
+
+        // http configuration
+        config.port = config.port || data.process.env.PORT || 8080;  // set our port
+
+        // configure paths & directories
+        config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
         config.homeDir = path
-        console.log("[meta4node] home:", config.homeDir)
+
+        // default feature routes
+        config.features = config.features || {
+            ux: "/ux",
+            login: "/login",
+            models: "/models",
+            upload: "/upload"
+        }
+
+        console.log("[meta4node] home directory:", config.homeDir)
 
         // =============================================================================
         // Configure routes
@@ -62,7 +73,7 @@ args.forEach(function(path) {
         var router = express.Router();              // get an instance of the express Router
 
         // configure Express
-        app.use(apiRoot, router);
+        app.use(config.basePath, router);
 
         // Authentication by Passport
         router.use(passport.initialize());
@@ -71,17 +82,19 @@ args.forEach(function(path) {
         // =============================================================================
         // authentication
 
-        app.post('/login', passport.authenticate('local',
+        assert(config.features.login, "{{login}} feature not configured")
+        app.post(config.features.login, passport.authenticate('local',
             { successRedirect: '/', failureRedirect: '/login', failureFlash: true }
         ) );
 
         // =============================================================================
-        // app static files
+        // application static files
 
+        assert(config.paths.static, "{{static}} path is missing")
         var staticPath = path+"/"+config.paths.static
         router.use('/static', express.static(staticPath));
 
-        // meta4 static files
+        // embedded static files
         router.get('/static/*', function(req,res,next) {
             var path = req.params[0];
             if (path.indexOf('..') === -1) {
@@ -95,6 +108,8 @@ args.forEach(function(path) {
             next()
         });
 
+        // TODO: support inferred 'index.html' route
+
         console.log("[meta4node] "+config.basePath+"/static from:",staticPath)
 
         // =============================================================================
@@ -103,14 +118,8 @@ args.forEach(function(path) {
         var apiFilename = path+"/"+config.paths.apis
         var files = util.findFiles(apiFilename)
 
-        // default feature paths
-        config.features = config.features || {
-            ux: "/ux",
-            models: "/models",
-            upload: "/upload"
-        }
-
         // build API routes
+        // TODO: re-refactor static & dynamic (Swagger) routes
         _.each(files, function(data, file) {
             apis.build(router, config, JSON.parse(data) )
 
@@ -119,7 +128,7 @@ args.forEach(function(path) {
         // start HTTP server
         app.listen(config.port, function() {
             // we're good to go ...
-            console.log('[meta4node] '+config.name+' listening on port ' + config.port);
+            console.log('[meta4node] '+config.name+' running on http://' + config.host+":"+config.port+config.basePath);
         });
 
     })

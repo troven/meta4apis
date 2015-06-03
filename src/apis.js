@@ -6,7 +6,7 @@ var exports = module.exports = {};
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var multer     = require('multer');         // multi-part form handler
-var assert     = require('assert');         // assert
+var assert     = require('assert');         // assertions
 
 // =============================================================================
 // meta4 packages
@@ -32,7 +32,7 @@ exports.build = function(router, config, apiConfig) {
     });
 
     // =============================================================================
-    // multi-part file upload
+    // configure multi-part file upload
 
     var uploadDir = config.homeDir+"/"+config.paths.uploads
     assert(config.paths.uploads, "{{uploads}} path is missing")
@@ -52,7 +52,10 @@ exports.build = function(router, config, apiConfig) {
         },
         onFileUploadComplete: function (file, req, res) {
 //            console.log(file.fieldname + ' uploaded to  ' + file.path)
-            delete file.path; // obfuscate local directory
+
+            delete file.path;       // obfuscate local directory
+            delete file.buffer;     // don't round-trip
+
             res.json(file)
         }
     }));
@@ -81,7 +84,8 @@ exports.build = function(router, config, apiConfig) {
 
     router.get(config.features.ux, function(req, res) {
 
-        // NOTE: blocking I/O .. for generation of recipe files
+        // live re-generation of recipe files
+        // NOTE: blocking I/O inside
         var recipe = ux.build(config)
         recipe.url = req.protocol+"://"+req.hostname+":"+config.port
         recipe.basePath = basePath
