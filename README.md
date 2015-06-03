@@ -1,13 +1,18 @@
 meta4node - executable wireframe server
 =======================================
 
-A lightweight server for meta4beta written in NodeJS and ExpressJS.
+A lightweight server for 'meta4' written in NodeJS and ExpressJS.
 
-meta4beta helps you to quickly build fully working, interactive applications for web and mobile without (much) coding.
+What is 'meta4'? It's a front-end framework for building applications using meta-data to define an application rather than code.
 
-The core of meta4beta is a JSON configuration that declares, defines and orchestrates your application models, views and business logic.
+We built meta4 to streamline the construction of interactive apps, prototypes & MVPs without (much) coding.
 
-It uses a configuration over convention approach, allowing a high level of design-time flexability with a simple JSON-based syntax.
+We believe that it provides a high level of design-time flexibility with a sane JSON syntax.
+
+The result is responsive, maintainable application that can be rapidly constructed & deployed.
+
+Meta4's meta-model defines and orchestrates your application models, views, business logic and HTML templates.
+
 
 meta4beta is based on Backbone & Marionette, because they provide a minimally opinated framework that is easy to understand, extend and scale.
 

@@ -1,13 +1,14 @@
 {
   "name": "meta4demo",
-
   "basePath": "/meta4demo",
+  "host": "meta4.localhost",
   "port": 9090,
 
   "paths": {
-	"api": "api/demo.json",
+	"apis": "apis",
     "views": "views",
     "models": "models/meta",
+    "data": "models/data",
     "scripts": "scripts",
     "templates": "templates/client",
 	"static": "public"

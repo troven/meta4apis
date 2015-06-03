@@ -1,12 +1,14 @@
 {
-  "name": "meta4",
-  "version": "1.0.0",
-  "description": "executable wireframes",
-  "main": "index.js",
+  "name": "meta4node",
+  "version": "0.5.2",
+  "description": "A server for executable 'meta4' wire-frames",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node meta4/index.js",
+    "demo": "node demo/index.js"
   },
   "keywords": [
+    "meta4",
     "backbone",
     "marionette",
     "bootstrap",
@@ -21,7 +23,11 @@
   "license": "Apache",
   "dependencies": {
     "tingodb": "~0.3.4",
+    "vhost": "~3.0.0",
+    "connect": "~3.0.2",
     "express": "~4.x.x",
+    "passport": "~0.2.2",
+    "passport-local": "~1.0.0",
     "optimist": "0.2.x",
     "underscore": "~1.8.3",
     "body-parser": "~1.0.1"
