@@ -1,0 +1,15 @@
+{
+   "id": "projects",
+   "label": "Projects Model",
+   "isRemote": true,
+   "isClient": true,
+   "type": "Remote",
+   "store": "Orient",
+   "prefetch": true,
+   "debug": false,
+   "defaults": {
+	  "label": "New Project"
+   },
+   "schema": {
+   }
+}

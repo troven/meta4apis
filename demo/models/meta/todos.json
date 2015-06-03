@@ -1,0 +1,25 @@
+{
+  "id": "todos",
+  "label": "ToDo Item Model",
+  "isRemote": true,
+  "isClient": true,
+  "type": "Remote",
+  "store": "Orient",
+  "prefetch": true,
+  "debug": true,
+  "defaults": {
+    "label": "New Task"
+  },
+  "schema": {
+    "label": {
+      "validators": ["required"]
+    },
+    "complete": {
+      "facet": true
+    },
+    "dueDate": {
+      "facet": true
+    }
+  },
+  "filter": true
+}
