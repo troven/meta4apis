@@ -9,19 +9,10 @@ var _          = require('underscore');     // collections helper
 // =============================================================================
 // handle model requests
 
-exports.handle = function(req, res, meta) {
+exports.handle = function(req, res, meta, meta4) {
 
-    var file = meta.homeDir+"/"+meta.id+".json"
-    fs.readFile(file, function(error, data) {
-        if (error) {
-console.log("Model Data Error: ", file, error)
-            res.status = 404;
-            return res.send('no model data: '+meta.id);
-        }
+    var db = require("./store/"+meta.store)
+    db.handle(req, res, meta, meta4)
 
-console.log("Model: ", req.method, meta.id)
-        var models = JSON.parse(data)
-    res.json({ success: true, meta: meta, data: models });
-    })
 
 }

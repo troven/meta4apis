@@ -4,7 +4,7 @@
   "isRemote": true,
   "isClient": true,
   "type": "Remote",
-  "store": "Orient",
+  "store": "tingodb",
   "prefetch": true,
   "debug": true,
   "defaults": {

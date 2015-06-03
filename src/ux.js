@@ -36,6 +36,7 @@ exports.build = function(config) {
 
     // =============================================================================
     // load the Model definitions
+
     var modelsDir = config.homeDir+"/"+config.paths.models
     found  = util.findFiles(modelsDir, AcceptJSON )
 
@@ -58,6 +59,7 @@ exports.build = function(config) {
 
     _.each( found, function(data, file) {
         var id = path.basename(file, ".html");
+//TODO: paths are being truncated
         // strip repetitive whitespace
         recipe.templates[id] = (""+data).replace(/\s+/g, ' ');
     })
@@ -70,6 +72,7 @@ exports.build = function(config) {
 
     _.each( found, function(data, file) {
         var id = path.basename(file, ".js");
+//TODO: paths are being truncated
         recipe.scripts[id] = ""+data
     })
 

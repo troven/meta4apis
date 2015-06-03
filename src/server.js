@@ -57,12 +57,12 @@ args.forEach(function(path) {
 
         var router = express.Router();              // get an instance of the express Router
 
-        // Authentication by Passport
-        app.use(passport.initialize());
-        app.use(passport.session());
-
         // configure Express
         app.use(apiRoot, router);
+
+        // Authentication by Passport
+        router.use(passport.initialize());
+        router.use(passport.session());
 
         // authentication
 
@@ -70,10 +70,11 @@ args.forEach(function(path) {
             { successRedirect: '/', failureRedirect: '/login', failureFlash: true }
         ) );
 
-        // static files
+        // app static files
         var staticPath = path+"/"+config.paths.static
         router.use('/static', express.static(staticPath));
 
+        // meta4 static files
         router.get('/static/*', function(req,res,next) {
             var path = req.params[0];
             if (path.indexOf('..') === -1) {
@@ -86,7 +87,6 @@ args.forEach(function(path) {
             }
             next()
         });
-
 
         console.log("[meta4node] "+config.basePath+"/static from:",staticPath)
 

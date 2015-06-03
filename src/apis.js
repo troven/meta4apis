@@ -72,7 +72,7 @@ exports.build = function(router, config, apiConfig) {
                 if (meta.id == id) {
                     meta.homeDir = config.homeDir+"/"+config.paths.data
                     // delegate the request
-                    return models.handle(req, res, meta)
+                    return models.handle(req, res, meta, config)
                 }
             } else {
                 res.status = 500;
