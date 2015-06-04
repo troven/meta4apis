@@ -4,35 +4,44 @@
   "description": "A server for executable 'meta4' wire-frames",
   "main": "server.js",
   "scripts": {
-    "start": "node meta4/index.js",
-    "demo": "node demo/index.js"
+	"start": "node meta4/index.js",
+	"demo": "node demo/index.js"
   },
+  "main": "./src/server",
   "keywords": [
-    "meta4",
-    "backbone",
-    "marionette",
-    "bootstrap",
-    "json",
-    "wireframe",
-    "agile",
-    "lean",
-    "mvc",
-    "mvp"
+	"meta4",
+	"backbone",
+	"marionette",
+	"bootstrap",
+	"json",
+	"wireframe",
+	"agile",
+	"lean",
+	"mvc",
+	"mvp"
   ],
   "author": "Troven <meta4@troven.com.au> (http://meta4beta.com/)",
-  "license": "Apache",
+  "licenses": [
+	{
+	  "type": "Apache 2.0",
+	  "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+	}
+  ],
   "dependencies": {
-    "tingodb": "~0.3.4",
-    "vhost": "~3.0.0",
-    "multer": "~0.1.8",
-    "assert": "~1.3.0",
-    "connect": "~3.0.2",
-    "express": "~4.x.x",
-    "passport": "~0.2.2",
-    "passport-local": "~1.0.0",
-    "optimist": "0.2.x",
-    "underscore": "~1.8.3",
-    "body-parser": "~1.0.1"
+	"tingodb": "~0.3.4",
+	"vhost": "~3.0.0",
+	"multer": "~0.1.8",
+	"assert": "~1.3.0",
+	"connect": "~3.0.2",
+	"express": "~4.x.x",
+	"express-session": "~1.11.2",
+	"swaggerize-express": "~4.0.2",
+	"cookie": "~0.1.3",
+	"passport": "~0.2.2",
+	"passport-local": "~1.0.0",
+	"optimist": "0.2.x",
+	"underscore": "~1.8.3",
+	"body-parser": "~1.0.1"
 
   }
 

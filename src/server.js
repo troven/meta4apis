@@ -8,10 +8,12 @@ var BOOT_FILE = "/meta4.json"
 
 var express    = require('express');        // call express
 var vhost      = require('vhost');          // name-based virtual hosting
-var connect    = require('connect');        // 
 var bodyParser = require('body-parser');    // handle POST bodies
+var cookie     = require('cookie');         // cookie parser
+var session    = require('express-session');// session support
 var passport   = require('passport');       // passport
 var assert     = require('assert');         // assertions
+var crypto     = require('crypto');         // encryption
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 
@@ -19,8 +21,7 @@ var _          = require('underscore');     // collections helper
 // meta4 packages
 
 var util     = require('./util');           // utilities
-var apis     = require('./apis');           // API (route) builder
-var login    = require('./login');          // login
+var features = require('./features');       // features
 
 // =============================================================================
 // web server initialization
@@ -41,14 +42,17 @@ var args = process.argv.slice(2)
 args.forEach(function(path) {
 
     // =============================================================================
-    // read meta4 boot file
+    // configure and launch the meta4node server
+    // multiple command-line arguments can instantiate virtual hosts
 
     var filename = path+BOOT_FILE
 
+    // read meta4 boot file
     fs.readFile(filename, function(error, data) {
 
         // boot configuration
         var config = JSON.parse(data);
+        var SESSION_SECRET = config.salt || "SECRET_"+config.name
 
         // http configuration
         config.port = config.port || data.process.env.PORT || 8080;  // set our port
@@ -57,45 +61,28 @@ args.forEach(function(path) {
         config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
         config.homeDir = path
 
-        // default feature routes
-        config.features = config.features || {
-            ux: "/ux",
-            login: "/login",
-            models: "/models",
-            upload: "/upload"
-        }
-
         console.log("[meta4node] home directory:", config.homeDir)
 
         // =============================================================================
-        // Configure routes
+        // configure Express Router
 
         var router = express.Router();              // get an instance of the express Router
 
         // configure Express
         app.use(config.basePath, router);
+//        app.use(session({secret: SESSION_SECRET}));
 
-        // Authentication by Passport
-        router.use(passport.initialize());
-        router.use(passport.session());
-
-        // =============================================================================
-        // authentication
-
-        assert(config.features.login, "{{login}} feature not configured")
-        app.post(config.features.login, passport.authenticate('local',
-            { successRedirect: '/', failureRedirect: '/login', failureFlash: true }
-        ) );
+        console.log("[meta4node] initialize routes")
 
         // =============================================================================
         // application static files
 
         assert(config.paths.static, "{{static}} path is missing")
         var staticPath = path+"/"+config.paths.static
-        router.use('/static', express.static(staticPath));
+        router.use('/', express.static(staticPath));
 
         // embedded static files
-        router.get('/static/*', function(req,res,next) {
+        router.get('/*', function(req,res,next) {
             var path = req.params[0];
             if (path.indexOf('..') === -1) {
                 var file = __dirname + '/static/' + path
@@ -109,21 +96,10 @@ args.forEach(function(path) {
         });
 
         // TODO: support inferred 'index.html' route
-
         console.log("[meta4node] "+config.basePath+"/static from:",staticPath)
 
-        // =============================================================================
-        // read and install API definitions
-
-        var apiFilename = path+"/"+config.paths.apis
-        var files = util.findFiles(apiFilename)
-
-        // build API routes
-        // TODO: re-refactor static & dynamic (Swagger) routes
-        _.each(files, function(data, file) {
-            apis.build(router, config, JSON.parse(data) )
-
-        })
+        // configure Features
+        features.configure(router, config)
 
         // start HTTP server
         app.listen(config.port, function() {

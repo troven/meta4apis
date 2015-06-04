@@ -1,22 +1,47 @@
-var exports = module.exports = {};
+var self = exports = module.exports = module.exports || {};
 
 // =============================================================================
 // framework packages
 
 var fs         = require('fs');             // file system
 var path       = require('path');           // file path helper
+var assert     = require('assert');         // assertions
 var _          = require('underscore');     // collections helper
 
 // =============================================================================
 // meta4 packages
 
-var util     = require('./util');           // convenience functions
+var util     = require('../util');           // convenience functions
 
 // =============================================================================
-// build UX recipes from local files
+// Configure UX - load recipes from local files
 
-exports.build = function(config) {
+exports.configure = function(router, config) {
 
+    var feature = config.features.ux
+    assert(feature.path, "{{ux}} feature not configured")
+    var paths = feature.paths || config.paths
+    console.log("\tUX:", feature, paths)
+
+    router.get(feature.path, function(req, res) {
+
+        // live re-generation of recipe files
+        // NOTE: blocking I/O inside
+        var recipe = self.handle(config)
+        recipe.url = req.protocol+"://"+req.hostname+":"+config.port+config.basePath
+        res.json(recipe);
+
+    });
+
+    console.log("[meta4node] UX initialized")
+}
+
+// =============================================================================
+// dynamically build the UX definition
+
+exports.handle = function(config) {
+
+    var feature = config.features.ux
     var recipe = { views: {}, models: {}, scripts: {}, templates: {} }
 
     var AcceptJSON = function(file, data) { return file.indexOf(".json")>0 }
@@ -25,7 +50,7 @@ exports.build = function(config) {
     // =============================================================================
     // load the View definitions
 
-    var viewsDir = config.homeDir+"/"+config.paths.views
+    var viewsDir = config.homeDir+"/"+feature.home
     var found  = util.findFiles(viewsDir, AcceptJSON )
 
     _.each( found, function(data, file) {
@@ -49,7 +74,7 @@ exports.build = function(config) {
             recipe.models[model.id] = model
         }
 
-        model.url = model.url || config.basePath+config.features.models+"/"+model.id
+        model.url = model.url || config.basePath+feature.crud+"/"+model.id
 //        console.log("\tmodel: ", model.id, "@", model.url)
     })
 

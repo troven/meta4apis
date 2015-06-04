@@ -3,10 +3,10 @@
   "basePath": "/meta4demo",
   "host": "meta4.localhost",
   "port": 9090,
+  "salt": "1234567890",
 
   "paths": {
-    "uploads": "uploads",
-	"apis": "apis",
+    "upload": "uploads",
     "views": "views",
     "models": "models/meta",
     "data": "models/data",
@@ -15,12 +15,13 @@
 	"static": "public"
   },
 
-  "upload": {
-    "limits": {
-      "fieldNameSize": 100,
-      "files": 2,
-      "fields": 5
-    }
+  "feature": {
+	"upload": {
+	  "limits": {
+		"fieldNameSize": 100,
+		"files": 2,
+		"fields": 5
+	  }
+	}
   }
-
 }
