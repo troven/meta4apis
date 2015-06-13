@@ -1,59 +1,55 @@
 {
   "name": "meta4node",
-  "version": "0.7.10",
+  "version": "0.7.11",
   "description": "A server for executable 'meta4' wire-frames",
-  "main": "server.js",
-  "scripts": {
-	"start": "node meta4/index.js",
-	"demo": "node demo/index.js"
-  },
   "main": "./src/server",
+  "scripts": {
+    "start": "node meta4/index.js",
+    "demo": "node demo/index.js"
+  },
   "keywords": [
-	"meta4",
-	"backbone",
-	"marionette",
-	"bootstrap",
-	"json",
-	"wireframe",
-	"agile",
-	"lean",
-	"mvc",
-	"mvp"
+    "meta4",
+    "backbone",
+    "marionette",
+    "bootstrap",
+    "json",
+    "wireframe",
+    "agile",
+    "lean",
+    "mvc",
+    "mvp"
   ],
   "author": "Troven <meta4@troven.com.au> (http://meta4beta.com/)",
   "licenses": [
-	{
-	  "type": "Apache 2.0",
-	  "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-	}
+    {
+      "type": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
   ],
   "dependencies": {
-	"meta4helpers": "~0.1.3",
-	"nedb": "~1.1.2",
-	"vhost": "~3.0.0",
-	"multer": "~0.1.8",
-	"assert": "~1.3.0",
-	"connect": "~3.0.2",
-	"express": "~4.x.x",
-	"machine": "~9.0.4",
-	"express-session": "~1.11.2",
-	"swaggerize-express": "~4.0.2",
-	"cookie": "~0.1.3",
-	"passport": "~0.2.2",
-	"passport-local": "~1.0.0",
-	"optimist": "0.2.x",
-	"underscore": "~1.8.3",
-	"body-parser": "~1.0.1",
-	"mkdirp": "~0.5.1",
-	"minimist": "~1.1.1"
-
+    "meta4helpers": "~0.1.3",
+    "nedb": "~1.1.2",
+    "vhost": "~3.0.0",
+    "multer": "~0.1.8",
+    "assert": "~1.3.0",
+    "connect": "~3.0.2",
+    "express": "~4.x.x",
+    "machine": "~9.0.4",
+    "express-session": "~1.11.2",
+    "swaggerize-express": "~4.0.2",
+    "cookie": "~0.1.3",
+    "passport": "~0.2.2",
+    "passport-local": "~1.0.0",
+    "optimist": "0.2.x",
+    "underscore": "~1.8.3",
+    "body-parser": "~1.0.1",
+    "mkdirp": "~0.5.1",
+    "minimist": "~1.1.1"
   },
-
   "devDependencies": {
-	"grunt": "~0.4.5",
-	"grunt-contrib-jshint": "~0.10.0",
-	"grunt-contrib-nodeunit": "~0.4.1",
-	"grunt-contrib-uglify": "~0.5.0"
+    "grunt": "~0.4.5",
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-contrib-nodeunit": "~0.4.1",
+    "grunt-contrib-uglify": "~0.5.0"
   }
-
 }
