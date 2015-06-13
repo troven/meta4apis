@@ -2,7 +2,7 @@
    "id": "views:projects/create",
    "label": "Create a project",
    "comment": "Create a project in a few short steps.",
-   "widget": "Wizard", "modal": true,
+   "widget": "Tabs", "modal": true,
    "collection": "projects",
    "iq": { },
    "className": "col-sm-12",

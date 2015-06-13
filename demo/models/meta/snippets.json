@@ -3,7 +3,7 @@
   "label": "Snippets Model",
   "isRemote": true,
   "isClient": true,
-  "type": "Remote",
+  "type": "Default",
   "store": "file",
   "prefetch": true,
   "debug": false,

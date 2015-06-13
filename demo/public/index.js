@@ -45,6 +45,7 @@ require.config({
         fact: "meta4beta/fact",
         ux: "meta4beta/ux",
         ux_mixin: "meta4beta/ux.mixin",
+        ux_dialog: "meta4beta/ux.dialog",
         iq: "meta4beta/iq",
         asq: "meta4beta/asq",
         meta4app: "meta4beta/meta4app",
@@ -152,7 +153,7 @@ require(['splash'], function(splash) {
     var options = { autoBoot: true,
         id: "meta4demo",
         DEBUG: true,
-        url: "/meta4demo/UX",
+        url: "UX",
         parse: function(r) {
             return r;
         }

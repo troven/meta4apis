@@ -11,22 +11,21 @@ var swaggerize = require('swaggerize-express');
 // =============================================================================
 // meta4 packages
 
-var util       = require('../util');        // Utils
+var helper     = require('meta4helpers');   // files & mixins
 
 // =============================================================================
 // configure the API routes
 
-exports.configure = function(router, config) {
-
-    var feature = config.features.apis
-    console.log("\tAPI:", feature)
+exports.feature = function(router, feature, config) {
 
     // =============================================================================
     // read and install API definitions
 
 
-    var apiFilename = config.homeDir+feature.path
-    var files = util.findFiles(apiFilename)
+    var apiFilename = feature.home
+    console.log("\tAPI:", apiFilename)
+
+    var files = helper.files.find(apiFilename)
 
     // build API routes
     // TODO: re-refactor static & dynamic (Swagger) routes
@@ -34,15 +33,6 @@ exports.configure = function(router, config) {
 //        apis.configure(router, config, JSON.parse(data) )
 //
 //    })
-
-    var basePath = config.basePath
-
-    // =============================================================================
-    // simple instrumentation / diagnostics
-
-    router.get('/about', function(req, res) {
-        res.json({ message: 'Welcome to '+config.name, basePath: basePath, apis: clientAPIs });
-    });
 
     // =============================================================================
     // configure Swagger API definitions
@@ -66,7 +56,4 @@ exports.configure = function(router, config) {
 //
 //        clientAPIs.push( { path: api.path } )
 //    })
-
-    assert(basePath, "{{basePath}} is missing")
-    console.log("[meta4node] API initialized:", basePath) // , config, "\n API: "
 }

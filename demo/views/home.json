@@ -1,6 +1,5 @@
 {
   "id": "views:home",
-  "el": "#home",
   "label": "Welcome",
   "widget": "Home",
   "views": {

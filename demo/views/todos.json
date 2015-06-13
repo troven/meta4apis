@@ -9,6 +9,7 @@
       "widget": "Regions",
       "views": {
         "header": {
+          "template": "Hello",
           "debug": true,
           "widget": "Template"
         },

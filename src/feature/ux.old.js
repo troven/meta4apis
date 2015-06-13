@@ -11,62 +11,74 @@ var _          = require('underscore');     // collections helper
 // =============================================================================
 // meta4 packages
 
-var util     = require('../util');           // convenience functions
+var helper     = require('meta4helpers');   // files & mixins
+var ux         = require('meta4ux');        // ux features
 
 // =============================================================================
 // Configure UX - load recipes from local files
 
-exports.configure = function(router, config) {
+exports.feature = function(router, feature, config) {
 
-    var feature = config.features.ux
     assert(feature.path, "{{ux}} feature not configured")
+    assert(config.features.crud, "UX requires CRUD configuration");
+    assert(config.features.crud.home, "CRUD {{home}} is missing");
+
     var paths = feature.paths || config.paths
-    console.log("\tUX:", feature, paths)
+    console.log("\tUX:", feature.path)
 
     router.get(feature.path, function(req, res) {
+console.log("GET UX: ", req.path)
 
         // live re-generation of recipe files
         // NOTE: blocking I/O inside
-        var recipe = self.handle(config)
+        var recipe = self.handle(feature, config)
         recipe.url = req.protocol+"://"+req.hostname+":"+config.port+config.basePath
         res.json(recipe);
 
     });
-
-    console.log("[meta4node] UX initialized")
 }
 
 // =============================================================================
 // dynamically build the UX definition
 
-exports.handle = function(config) {
+exports.handle = function(feature, config) {
 
-    var feature = config.features.ux
     var recipe = { views: {}, models: {}, scripts: {}, templates: {} }
 
     var AcceptJSON = function(file, data) { return file.indexOf(".json")>0 }
     var AcceptHTML = function(file, data) { return file.indexOf(".html")>0 }
+    var AcceptECMA = function(file, data) { return file.indexOf(".js")>0 }
 
     // =============================================================================
     // load the View definitions
 
-    var viewsDir = config.homeDir+"/"+feature.home
-    var found  = util.findFiles(viewsDir, AcceptJSON )
+    var viewsDir = feature.home
+    var found  = helper.files.find(viewsDir, AcceptJSON )
 
+    // create View recipe
     _.each( found, function(data, file) {
-        var view = JSON.parse(data)
-        view.id = view.id || path.basename(file, ".json")
-        recipe.views[view.id] = view
+        try {
+            var view = JSON.parse(data)
+            view.id = view.id || path.basename(path.normalize(file), ".json")
+            recipe.views[view.id] = view
+        } catch(e) {
+            console.error("Error:", file, e)
+        }
     })
 
     // =============================================================================
     // load the Model definitions
 
-    var modelsDir = config.homeDir+"/"+config.paths.models
-    found  = util.findFiles(modelsDir, AcceptJSON )
+    var modelsDir = feature.models
+    found  = helper.files.find(modelsDir, AcceptJSON )
 
     _.each( found, function(data, file) {
-        var model = JSON.parse(data)
+        if (!data) return
+        try {
+            var model = JSON.parse(data)
+        } catch(e) {
+            console.log("Corrupt JSON:", file)
+        }
 
         // only designated client models
         if (model.isClient) {
@@ -81,29 +93,31 @@ exports.handle = function(config) {
     // =============================================================================
     // load the HTML Templates
 
-    var templatesDir = config.homeDir+"/"+config.paths.templates
-    found  = util.findFiles(templatesDir, AcceptHTML )
+    var templatesDir = feature.templates
+    found  = helper.files.find(templatesDir, AcceptHTML )
 
     // add templates to recipe
+    var assetKey = "templates"
     _.each( found, function(data, file) {
-        var id = path.basename(file, ".html");
-//TODO: paths are being truncated
+        var id = file.substring(feature[assetKey].length+1)
+//console.log("UX: template", id)
 
         // strip repetitive whitespace
-        recipe.templates[id] = (""+data).replace(/\s+/g, ' ');
+        recipe.templates[assetKey+":"+id] = (""+data).replace(/\s+/g, ' ');
     })
 
     // =============================================================================
-    // load the client-side Scripts
+    // load the client-side JS scripts
 
-    var scriptsDir = config.homeDir+"/"+config.paths.scripts
-    found  = util.findFiles(scriptsDir, AcceptHTML )
+    var scriptsDir = feature.scripts
+    found  = helper.files.find(scriptsDir, AcceptECMA )
 
-    // add scripts to recipe
+    // add JS scripts to recipe
+    assetKey = "scripts"
     _.each( found, function(data, file) {
-        var id = path.basename(file, ".js");
-//TODO: paths are being truncated
-        recipe.scripts[id] = ""+data
+        var id = file.substring(feature[assetKey].length+1)
+//console.log("UX: script", id)
+        recipe.scripts[assetKey+":"+id] = ""+data
     })
 
     // UX recipe

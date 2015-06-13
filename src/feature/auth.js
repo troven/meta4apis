@@ -3,24 +3,24 @@ var exports = module.exports = module.exports || {};
 // =============================================================================
 // framework packages
 
+var _               = require('underscore');     // collections helper
 var passport        = require('passport')
 var LocalStrategy   = require('passport-local').Strategy
+var assert          = require('assert');         // assertions
 
 // =============================================================================
 // meta4 packages
 
-var assert     = require('assert');         // assertions
 
 // =============================================================================
 
-exports.configure = function(router, config) {
+exports.feature = function(router, feature, config) {
 
-    var feature = config.features.auth
     assert(feature.path, "{{auth}} feature not configured")
 
-    var paths = feature.path
+    var paths = feature.paths
 
-    console.log("\tAuth", feature)
+    console.log("\tAuth:", _.values(feature.path) )
 
 //    router.use(express.cookie());
 //    router.use(session({secret: SESSION_SECRET }));
@@ -41,9 +41,9 @@ console.log("deserializeUser:", id)
 
     /* GET login page. */
     router.get(paths.index, function(req, res) {
-console.log("deserializeUser:", id)
+console.log("index:", req.path, req.params)
         // Display the Login page with any flash message, if any
-        res.render('index', { message: req.flash('message') });
+        res.render('index');
     });
 
     /* Handle Login POST */
@@ -84,5 +84,4 @@ console.log("deserializeUser:", id)
     router.use(passport.initialize());
     router.use(passport.session());
 
-    console.log("[meta4node] AUTH initialized")
 }

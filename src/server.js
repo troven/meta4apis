@@ -1,7 +1,8 @@
+
 // =============================================================================
 // constants
 
-var BOOT_FILE = "/meta4.json"
+var BOOT_FILE = "meta4.json"
 
 // =============================================================================
 // framework packages
@@ -20,11 +21,8 @@ var _          = require('underscore');     // collections helper
 // =============================================================================
 // meta4 packages
 
-var util     = require('./util');           // utilities
 var features = require('./features');       // features
-
-// =============================================================================
-// web server initialization
+var install  = require('./install');        // grunt-powered installer
 
 var app        = express();                 // create app using express
 
@@ -34,78 +32,89 @@ var app        = express();                 // create app using express
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+
 // =============================================================================
-// instantiate runtime
+// Event-based API
 
+var EventEmitter = require('events').EventEmitter;
+var self = module.exports = new EventEmitter()
+
+// =============================================================================
 // process command line & boot application
-var args = process.argv.slice(2)
-args.forEach(function(path) {
 
-    // =============================================================================
-    // configure and launch the meta4node server
-    // multiple command-line arguments can instantiate virtual hosts
+self.features = features
 
-    var filename = path+BOOT_FILE
+self.cli = function() {
+    var argv       = require('minimist')(process.argv.slice(2));    // cmd line arguments
+    var args = argv['_']
 
+    if (args.length==0) {
+        var path = "package.json"
+        fs.readFile(path, function(err,data) {
+            assert(!err, "missing {{package.json}}")
+            var pkg = err?{ name: "meta4demo", version: "0.0.0" }:JSON.parse(data)
+
+            console.log("Auto Boot:", pkg.name, BOOT_FILE, "v"+pkg.version)
+            install.install(pkg.name, BOOT_FILE, argv)
+            self.boot(BOOT_FILE, argv)
+        })
+    }
+
+    args.forEach(function(path) {
+        self.boot(path+"/"+BOOT_FILE, argv)
+    })
+}
+
+self.boot = function(filename, options, callback) {
     // read meta4 boot file
     fs.readFile(filename, function(error, data) {
-
-        // boot configuration
+        assert(!error, "Failed to boot:"+ filename)
         var config = JSON.parse(data);
-        var SESSION_SECRET = config.salt || "SECRET_"+config.name
 
-        // http configuration
-        config.port = config.port || data.process.env.PORT || 8080;  // set our port
+        // merge with runtime options
+        config = _.extend(config, options)
+        console.log("Booting: ", filename, config, options)
+        self.start( config, callback )
+    });
+}
 
-        // configure paths & directories
-        config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
-        config.homeDir = path
+// =============================================================================
+// configure and launch the meta4node server
+// multiple command-line arguments can instantiate virtual hosts
 
-        console.log("[meta4node] home directory:", config.homeDir)
+self.start = function(config) {
 
-        // =============================================================================
-        // configure Express Router
+    assert(config.home, "Missing {{home}}")
+    assert(config.name, "Missing {{name}}")
+    assert(config.port, "Missing {{port}}")
 
-        var router = express.Router();              // get an instance of the express Router
+    // boot configuration
+    var SESSION_SECRET = config.salt || "SECRET_"+config.name+"_"+new Date().getTime()
 
-        // configure Express
-        app.use(config.basePath, router);
-//        app.use(session({secret: SESSION_SECRET}));
+    // configure paths & directories
+    config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
 
-        console.log("[meta4node] initialize routes")
+    console.log("[meta4node] home directory:", config.home)
 
-        // =============================================================================
-        // application static files
+    // =============================================================================
+    // configure Express Router
 
-        assert(config.paths.static, "{{static}} path is missing")
-        var staticPath = path+"/"+config.paths.static
-        router.use('/', express.static(staticPath));
+    var router = express.Router();              // get an instance of the express Router
 
-        // embedded static files
-        router.get('/*', function(req,res,next) {
-            var path = req.params[0];
-            if (path.indexOf('..') === -1) {
-                var file = __dirname + '/static/' + path
-                var stat = fs.existsSync(file)
-                if (stat) return res.sendFile(file);
-            } else {
-                res.status = 404;
-                return res.send('Not Found');
-            }
-            next()
-        });
+    // configure Express
+    app.use(config.basePath, router);
 
-        // TODO: support inferred 'index.html' route
-        console.log("[meta4node] "+config.basePath+"/static from:",staticPath)
+// DEPRECATED: find alternative?
+// app.use(session({secret: SESSION_SECRET}));
 
-        // configure Features
-        features.configure(router, config)
+    // configure Features
+    features.configure(router, config)
 
-        // start HTTP server
-        app.listen(config.port, function() {
-            // we're good to go ...
-            console.log('[meta4node] '+config.name+' running on http://' + config.host+":"+config.port+config.basePath);
-        });
+    // start HTTP server
+    app.listen(config.port, function() {
+        // we're good to go ...
+        console.log('[meta4node] '+config.name+' running on http://' + config.host+":"+config.port+config.basePath);
+    });
 
-    })
-})
+}
+

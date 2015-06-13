@@ -1,7 +1,12 @@
 # meta4
 
 demo/uploads
+notes
+tmp
+*.sh
 
+# IntelliJ
+*.iml
 
 # Logs
 logs

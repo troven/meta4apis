@@ -12,27 +12,36 @@ var _          = require('underscore');     // collections helper
 // =============================================================================
 // meta4 packages
 
-var util     = require('../util');           // convenience functions
+var helper     = require('meta4helpers');   // files & mixins
 
 // =============================================================================
 // Configure Upload Feature
 
-exports.configure = function(router, config) {
+exports.feature = function(router, feature, meta4) {
 
-    var feature = config.features.upload
-    assert(feature.path, "{{upload}} feature not configured")
+    // meta4ure Upload
+    feature = _.defaults(feature, {
+        path: "/upload",
+        home: "uploads",
+        limits: {
+            fieldNameSize: 100,
+            files: 2,
+            fields: 5
+        }
+    })
 
-    console.log("\tUpload", feature)
+    assert(feature.path, "{{upload}} feature not meta4ured")
+    console.log("\tUpload", feature.path)
 
     // =============================================================================
-    // configure multi-part file upload
+    // meta4ure multi-part file upload
 
-    var uploadDir = config.homeDir+"/"+feature.home
-
-    console.log("\tUPLOAD to: ", uploadDir)
+    var uploadDir = feature.home
+    console.log("\tUPLOAD to:", uploadDir)
+    helper.files.mkdirs(uploadDir)
 
     router.use(feature.path, multer({
-        limits: config.feature.upload.limits,
+        limits: feature.limits,
         dest: uploadDir,
         rename: function (fieldname, filename) {
 //            fs.mkdirSync(uploadDir+"/"+fieldname)
@@ -42,15 +51,21 @@ exports.configure = function(router, config) {
 //            console.log(file.originalname + ' is starting ...')
         },
         onFileUploadComplete: function (file, req, res) {
-//            console.log(file.fieldname + ' uploaded to  ' + file.path)
+            file.model_id = req.body.id
+            file.id = file.name
+            file.label = file.originalname
 
+            console.log(file.fieldname, 'uploaded:', file)
+
+            delete file.originalname
             delete file.path;       // obfuscate local directory
             delete file.buffer;     // don't round-trip
 
             //TODO: store 'file' meta-data in a data store
-            res.json(file)
+            fs.writeFile(file.path+".json", JSON.stringify(file))
+
+            res.json( { data: _.pick(file,'id', 'label', "size", "mimetype"), status: 'success' } )
         }
     }));
 
-    console.log("[meta4node] Upload initialized")
 }
