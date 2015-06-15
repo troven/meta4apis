@@ -1,6 +1,6 @@
 {
   "name": "meta4node",
-  "version": "0.7.15",
+  "version": "0.7.16",
   "description": "A server for executable 'meta4' wire-frames",
   "main": "src/index",
   "keywords": [
@@ -46,6 +46,5 @@
     "mkdirp": "~0.5.1",
     "minimist": "~1.1.1"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }
