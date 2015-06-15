@@ -36,7 +36,6 @@ exports.feature = function(router, feature, meta4) {
     // meta4ure multi-part file upload
 
     var uploadDir = feature.home
-    console.log("\tUpload directory:", uploadDir)
     helper.files.mkdirs(uploadDir)
 
     router.use(feature.path, multer({

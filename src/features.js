@@ -19,17 +19,30 @@ self.register = function(key, feature) {
 	exports.__features[key] = feature
 }
 
-self.configure = function(router, config) {
+self.install = function(config) {
+	self.defaults(config)
 
-    assert(config.home, "Feature is missing {{home}}")
+    if(!config.features) return;
+    assert(config.home, "Feature.install is missing {{home}}")
 
-    // default configuration
+    var sorted = _.sortBy( _.values(features) , function(a) { return a.order?a.order:a.path.length })
+    _.each(sorted, function(feature) {
+        var fn   = self.__features[feature.package] || require(feature.requires);
+        if (fn) {
+            fn.install(feature, config)
+        }
+    })
+}
+
+self.defaults = function(config) {
+    assert(config.home, "Feature.defaults is missing {{home}}")
+
     var features = config.features = config.features || {}
 
     // configure API
     features.apis = _.extend({
         path: "/api",
-        home: config.home+"/apis"
+        home: config.home+"/api"
     }, features.apis)
 
     // configure CRUD
@@ -75,6 +88,14 @@ self.configure = function(router, config) {
             signup: "/signup"
         }
     }, features.auth)
+}
+
+self.configure = function(router, config) {
+
+    assert(config.home, "Feature.configure is missing {{home}}")
+
+    // default configuration
+	self.defaults(config)
 
     // =============================================================================
     // Load and configure Feature

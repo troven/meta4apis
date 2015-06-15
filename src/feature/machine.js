@@ -23,6 +23,9 @@ self.feature = function(router, feature, config) {
 
     router.use(feature.path+'/:pack.:machine', function(req, res) {
 
+        assert(feature.config[req.params.machine], "feature {{machine}} missing for "+req.params.machine)
+        assert(feature.config[req.params.pack], "feature {{pack}} missing for "+req.params.pack)
+
         // meta4 options
         var options = feature.config[req.params.pack]
         // composite meta-data

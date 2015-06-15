@@ -2,11 +2,7 @@
   "name": "meta4node",
   "version": "0.7.15",
   "description": "A server for executable 'meta4' wire-frames",
-  "main": "./src/server",
-  "scripts": {
-    "start": "node meta4/index.js",
-    "demo": "node demo/index.js"
-  },
+  "main": "src/index",
   "keywords": [
     "meta4",
     "backbone",
@@ -51,9 +47,5 @@
     "minimist": "~1.1.1"
   },
   "devDependencies": {
-    "grunt": "~0.4.5",
-    "grunt-contrib-jshint": "~0.10.0",
-    "grunt-contrib-nodeunit": "~0.4.1",
-    "grunt-contrib-uglify": "~0.5.0"
   }
 }
