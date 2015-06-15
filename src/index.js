@@ -1,6 +1,5 @@
-var self = module.exports
 
-// =============================================================================
+module.exports = require('./server');           // server
 
-self = require('./server');           // server
+
 
