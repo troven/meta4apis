@@ -16,6 +16,7 @@ var passport   = require('passport');       // passport
 var assert     = require('assert');         // assertions
 var crypto     = require('crypto');         // encryption
 var fs         = require('fs');             // file system
+var paths      = require('path');           // file path helper
 var _          = require('underscore');     // collections helper
 
 // =============================================================================
@@ -44,6 +45,14 @@ var self = module.exports = new EventEmitter()
 
 self.features = features
 
+self.announce = function() {
+    console.log("                _        _  _\n\
+ _ __ ___   ___| |_ __ _| || |\n\
+| '_ ` _ \\ / _ \\ __/ _` | || |_\n\
+| | | | | |  __/ || (_| |__   _|\n\
+|_| |_| |_|\\___|\\__\\__,_|  |_|\n\
+                       by troven\n")
+}
 self.cli = function() {
     var argv       = require('minimist')(process.argv.slice(2));    // cmd line arguments
     var args = argv['_']
@@ -53,16 +62,18 @@ self.cli = function() {
         fs.readFile(path, function(err,data) {
             assert(!err, "missing {{package.json}}")
             var pkg = err?{ name: "meta4demo", version: "0.0.0" }:JSON.parse(data)
-
-            console.log("Auto Boot:", pkg.name, BOOT_FILE, "v"+pkg.version)
             install.install(pkg.name, BOOT_FILE, argv)
+            self.announce()
             self.boot(BOOT_FILE, argv)
         })
     }
 
-    args.forEach(function(path) {
-        self.boot(path+"/"+BOOT_FILE, argv)
-    })
+    if (args.length>0) {
+        self.announce()
+        args.forEach(function(path) {
+            self.boot(path+"/"+BOOT_FILE, argv)
+        })
+    }
 }
 
 self.boot = function(filename, options, callback) {
@@ -73,7 +84,8 @@ self.boot = function(filename, options, callback) {
 
         // merge with runtime options
         config = _.extend(config, options)
-        console.log("Booting: ", filename)
+        console.log("[meta4] booting :", paths.normalize(filename))
+
         self.start( config, callback )
     });
 }
@@ -94,7 +106,7 @@ self.start = function(config) {
     // configure paths & directories
     config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
 
-    console.log("[meta4node] home directory:", config.home)
+    console.log("[meta4] home dir:", config.home)
 
     // =============================================================================
     // configure Express Router
@@ -113,7 +125,7 @@ self.start = function(config) {
     // start HTTP server
     app.listen(config.port, function() {
         // we're good to go ...
-        console.log('[meta4node] '+config.name+' running on http://' + config.host+":"+config.port+config.basePath);
+        console.log('[meta4] browse to: http://' + config.host+":"+config.port+config.basePath);
     });
 
 }

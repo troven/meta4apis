@@ -50,7 +50,7 @@ DEBUG&&console.log("Asset: ", file, stat?true:false)
         next()
     });
 
-DEBUG&&console.log("[meta4node] Assets "+config.basePath+"/static from:",assetHome)
+DEBUG&&console.log("[meta4] Assets "+config.basePath+"/static from:",assetHome)
 
 
 }

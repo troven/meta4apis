@@ -17,34 +17,25 @@ exports.install = function(path, filename) {
 
     var name = paths.basename(path)
 
-    var defaults = {
+    var _defaults = {
         "//": "Created "+new Date(),
          "name": name,
+         "home": "src",
          "basePath": "/"+name,
-         "host": name+".localhost",
-         "port": 9090,
+         "host": "localhost",
+         "port": 8080,
          "salt": new Date().getTime(),
-
-         "paths": {
-           "upload": "uploads",
-           "views": "views",
-           "models": "models/meta",
-           "data": "models/data",
-           "scripts": "scripts",
-           "templates": "templates/client",
-        "static": "public"
-         },
-
-         "feature": {
-         }
+         "features": {}
     }
+
+    require("./features").defaults(_defaults)
 
     var dir = helper.files.mkdirs(path)
     var configFile = filename
-    var data =  JSON.stringify(defaults)
+    var data =  JSON.stringify(_defaults)
 
     var found = fs.lstatSync(configFile)
     if (!found) fs.writeFileSync(configFile, data)
 
-    return defaults
+    return _defaults
 }

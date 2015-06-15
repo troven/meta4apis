@@ -3,65 +3,76 @@ var self = module.exports
 // =============================================================================
 // framework packages
 
-var assert     = require('assert');         // assertions
-var _          = require('underscore');     // collections helper
+var assert	  = require('assert');			// assertions
+var _			 = require('underscore');	  // collections helper
 
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper	  = require('meta4helpers');	// files & mixins
 
 // =============================================================================
-// Configure CRUD Feature
+//
+
+self.install = function(feature, config) {
+//	console.log("install machine", feature)
+
+	_.each(feature.config, function(options, name) {
+		// TODO: install node modules directly by name
+	})
+}
+
+// =============================================================================
 
 self.feature = function(router, feature, config) {
 
-    // =============================================================================
-    // dynamically route model / CRUD requests
+	 // =============================================================================
+	 // dynamically route model / CRUD requests
 
-    assert(feature, "{{machine}} feature not configured")
+	 assert(feature, "{{machine}} feature not configured")
+	 assert(feature.path, "{{machine}} path not configured")
 
-    router.use(feature.path+'/:pack.:machine', function(req, res) {
-
-        assert(feature.config[req.params.machine], "feature {{machine}} missing for "+req.params.machine)
-        assert(feature.config[req.params.pack], "feature {{pack}} missing for "+req.params.pack)
-
-        // meta4 options
-        var options = feature.config[req.params.pack]
-        // composite meta-data
-        var meta = _.extend({ machinePrefix: "machinepack-"}, options, req.params)
-
-        // get the machine package
-        var machine = require(meta.machinePrefix+req.params.pack)
-
-        // late-bind the query parameters
-        _.extend(meta, req.query)
-        // de-reference the machine's fn
-        var fn = machine[req.params.machine](meta)
-
-        // execute the machine asynchronously
-        var result = fn.exec({
-           error: function (err) {
-                return res.json( { id: req.params.pack+"/"+req.params.machine, status: 'failed', errors: [err]} );
-           },
-           success: function (result){
-                return res.json( { id: req.params.pack+"/"+req.params.machine, status: 'success', data: result, meta: meta });
-           },
-         })
-    });
+	 router.use(feature.path+'/:pack.:machine', function(req, res) {
+	    self.handle(req, res, feature, config)
+	 } );
 
 }
 
-// =============================================================================
-// Handle CRUD operations
+self.handle = function (req, res, feature, config) {
+																	
+	// meta4 options
+	var options = feature.config[req.params.pack]
+	assert(feature.config[req.params.pack], "feature {{pack}} config missing for "+req.params.pack)
 
-self.handle = function(req, res, meta, config) {
+	// composite meta-data
+	var meta = _.extend({ machinePrefix: "machinepack-"}, options, req.params)
 
-    // acquire the proxy
-    var store = meta.store || "file"
-    var crud = require("./crud/"+store)
+	// get the machine package
+	var machine = require(meta.machinePrefix+req.params.pack)
+	if (!machine) {
+		// error
+		 return res.json( { id: req.params.pack+"."+req.params.machine, status: 'error', message: 'missing machine-pack'} );
+	}
 
-    // dynamic delegation
-    crud.handle(req, res, meta, config)
+	// late-bind the query parameters
+	_.extend(meta, req.query)
 
+	// de-reference the machine's fn
+	var fn = machine[req.params.machine]
+	if (!fn) {
+		// error
+		 return res.json( { id: req.params.pack+"."+req.params.machine, status: 'error', message: 'missing machine'} );
+	}
+
+	// execute the machine asynchronously
+	var cmd = fn(meta)
+	var result = cmd.exec({
+		error: function (err) {
+			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'failed', errors: [err]} );
+		},
+		success: function (result){
+			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'success', data: result, meta: {} });
+		},
+	 })
 }
+

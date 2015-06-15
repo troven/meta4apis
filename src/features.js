@@ -28,7 +28,7 @@ self.install = function(config) {
     var sorted = _.sortBy( _.values(features) , function(a) { return a.order?a.order:a.path.length })
     _.each(sorted, function(feature) {
         var fn   = self.__features[feature.package] || require(feature.requires);
-        if (fn) {
+        if (fn && fn.install) {
             fn.install(feature, config)
         }
     })
@@ -95,6 +95,7 @@ self.configure = function(router, config) {
     assert(config.home, "Feature.configure is missing {{home}}")
 
     // default configuration
+    var features = config.features = config.features || {}
 	self.defaults(config)
 
     // =============================================================================
@@ -110,17 +111,18 @@ self.configure = function(router, config) {
 
     // match longest (most specific) paths first
     var sorted = _.sortBy( _.values(features) , function(a) { return a.order?a.order:a.path.length })
-    console.log("[meta4node] features:", _.pluck(sorted, "package"))
+    console.log("[meta4] features:", _.pluck(sorted, "package"))
 
     // naively prioritize routes based - shortest paths first
     _.each(sorted, function(options) {
 
-        if (options.disabled) { console.log("[meta4node] disabled:", options.package); return; }
+        if (options.disabled) { console.log("[meta4] disabled:", options.package); return; }
 
         var fn   = self.__features[options.package] || require(options.requires);
 
-        console.log("[meta4node] loaded:", options.package, " -> ", options.path, "@", options.home)
+        console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
         if (fn.feature) {
+            fn.install && fn.install(options, config)
             fn.feature(router, options, config)
         } else throw "not a meta4 feature: "+options.requires
     })

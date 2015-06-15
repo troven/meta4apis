@@ -70,7 +70,7 @@ console.log("index:", req.path, req.params)
 
            var user = { username: username }
 
-           console.log("[meta4node] login:", user)
+           console.log("[meta4] login:", user)
 
            return done(null, user);
 
