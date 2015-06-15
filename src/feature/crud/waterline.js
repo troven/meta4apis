@@ -8,7 +8,9 @@ var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 
 // =============================================================================
-var waterline  = require('waterline');      // waterline
+var Waterline  = require('waterline');      // waterline
+
+var mongodb = require('sails-mongodb');
 
 // =============================================================================
 // handle model requests
@@ -19,17 +21,20 @@ exports.handle = function(req, res, meta, config) {
     assert(meta.id, "CRUD FILE missing {{id}}")
 
 
-	var Collection = Waterline.Collection.extend({
-		// Define a custom table name
-		tableName: meta.id,
-		// Set schema true/false for adapters that support schema-less
-		schema: true,
-		// Define an adapter to use
-		adapter: 'mongodb',
-		// Define attributes for this collection
-		attributes: meta.schema
-	})
+	var options = {
+        // Define a custom table name
+        tableName: meta.id,
+        // Set schema true/false for adapters that support schema-less
+        schema: true,
+        // Define an adapter to use
+        adapter: mongodb,
+        // Define attributes for this collection
+        attributes: meta.schema
+    }
+	var Collection = Waterline.Collection.extend(options)
 
-	console.log("Collection", Collection)
+	console.log("Models", options)
+	var models = new Collection(options);
+
 
 }

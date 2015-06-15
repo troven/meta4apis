@@ -123,7 +123,11 @@ self.configure = function(router, config) {
         console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
         if (fn.feature) {
             fn.install && fn.install(options, config)
-            fn.feature(router, options, config)
+            try {
+	            fn.feature(router, options, config)
+            } catch(e) {
+                console.log("Feature Failed", options.package, e)
+            }
         } else throw "not a meta4 feature: "+options.requires
     })
 
