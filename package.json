@@ -1,6 +1,6 @@
 {
   "name": "meta4node",
-  "version": "0.7.14",
+  "version": "0.7.15",
   "description": "A server for executable 'meta4' wire-frames",
   "main": "./src/server",
   "scripts": {
@@ -20,10 +20,11 @@
     "mvp"
   ],
   "author": "Troven <meta4@troven.com.au> (http://meta4beta.com/)",
-"repository": {
+  "repository": {
     "type": "git",
     "url": "https://github.com/troven/meta4node.git"
-  },  "licenses": [
+  },
+  "licenses": [
     {
       "type": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
