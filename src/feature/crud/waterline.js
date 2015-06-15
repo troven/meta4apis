@@ -25,7 +25,7 @@ exports.handle = function(req, res, meta, config) {
         // Define a custom table name
         tableName: meta.id,
         // Set schema true/false for adapters that support schema-less
-        schema: true,
+        schema: false,
         // Define an adapter to use
         adapter: mongodb,
         // Define attributes for this collection
