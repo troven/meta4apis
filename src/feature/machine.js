@@ -36,6 +36,9 @@ self.feature = function(router, feature, config) {
 	    self.handle(req, res, feature, config)
 	 } );
 
+	 router.use(feature.path+'/about/:pack.:machine', function(req, res) {
+	    self.handle(req, res, feature, config)
+	 } );
 }
 
 self.handle = function (req, res, feature, config) {
@@ -66,12 +69,14 @@ self.handle = function (req, res, feature, config) {
 
 	// execute the machine asynchronously
 	var cmd = fn(meta)
+	var spec = _.omit(cmd, ["fn"])
+
 	var result = cmd.exec({
 		error: function (err) {
-			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'failed', errors: [err]} );
+			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'failed', meta: spec, errors: [err]} );
 		},
 		success: function (result){
-			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'success', data: result, meta: {} });
+			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'success', data: result, meta: spec });
 		},
 	 })
 }

@@ -2,6 +2,5 @@ var self = module.exports
 
 // =============================================================================
 
-var server = require('./server');           // server
+self = require('./server');           // server
 
-server.cli();

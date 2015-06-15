@@ -18,7 +18,7 @@ exports.handle = function(req, res, meta) {
     assert(meta.id, "CRUD FILE missing {{id}}")
 
     var contentType = req.get('Content-Type')
-    if (contentType.indexOf("multipart/form-data")>=0) {
+    if (contentType && contentType.indexOf("multipart/form-data")>=0) {
         console.log("Attachment: ", req.method, req.get('Content-Type'), file)
     }
 
