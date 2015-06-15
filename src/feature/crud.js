@@ -1,4 +1,4 @@
-var self = exports = module.exports = module.exports || {};
+var self = module.exports
 
 // =============================================================================
 // framework packages
@@ -14,9 +14,7 @@ var fs         = require('fs');             // file system
 // =============================================================================
 // Configure CRUD Feature
 
-exports.feature = function(router, feature, config) {
-
-    console.log("\tCRUD", feature.path)
+self.feature = function(router, feature, config) {
 
     // =============================================================================
     // dynamically route model / CRUD requests
@@ -59,7 +57,7 @@ console.log("meta home: ", meta.home)
 // =============================================================================
 // Handle CRUD operations
 
-exports.handle = function(req, res, meta, config) {
+self.handle = function(req, res, meta, config) {
 
     // acquire the proxy
     var store = meta.store || "file"

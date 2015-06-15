@@ -31,13 +31,12 @@ exports.feature = function(router, feature, meta4) {
     })
 
     assert(feature.path, "{{upload}} feature not meta4ured")
-    console.log("\tUpload", feature.path)
 
     // =============================================================================
     // meta4ure multi-part file upload
 
     var uploadDir = feature.home
-    console.log("\tUPLOAD to:", uploadDir)
+    console.log("\tUpload directory:", uploadDir)
     helper.files.mkdirs(uploadDir)
 
     router.use(feature.path, multer({

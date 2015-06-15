@@ -20,7 +20,10 @@
     "mvp"
   ],
   "author": "Troven <meta4@troven.com.au> (http://meta4beta.com/)",
-  "licenses": [
+"repository": {
+    "type": "git",
+    "url": "https://github.com/troven/meta4node.git"
+  },  "licenses": [
     {
       "type": "Apache 2.0",
       "url": "http://www.apache.org/licenses/LICENSE-2.0.html"

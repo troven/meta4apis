@@ -21,10 +21,10 @@ self.register = function(key, feature) {
 
 self.configure = function(router, config) {
 
+    assert(config.home, "Feature is missing {{home}}")
+
     // default configuration
     var features = config.features = config.features || {}
-
-//    assert(config.homeDir, "Feature is missing {{homeDir}}")
 
     // configure API
     features.apis = _.extend({
@@ -96,10 +96,9 @@ self.configure = function(router, config) {
 
         if (options.disabled) { console.log("[meta4node] disabled:", options.package); return; }
 
-        console.log("Load feature: ", options.package, "@", options.requires)
         var fn   = self.__features[options.package] || require(options.requires);
 
-        console.log("[meta4node] loaded:", fn, "=", options.package, " -> ", options.path, "@", options.home)
+        console.log("[meta4node] loaded:", options.package, " -> ", options.path, "@", options.home)
         if (fn.feature) {
             fn.feature(router, options, config)
         } else throw "not a meta4 feature: "+options.requires

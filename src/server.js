@@ -73,7 +73,7 @@ self.boot = function(filename, options, callback) {
 
         // merge with runtime options
         config = _.extend(config, options)
-        console.log("Booting: ", filename, config, options)
+        console.log("Booting: ", filename)
         self.start( config, callback )
     });
 }

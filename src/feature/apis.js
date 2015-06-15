@@ -23,7 +23,6 @@ exports.feature = function(router, feature, config) {
 
 
     var apiFilename = feature.home
-    console.log("\tAPI:", apiFilename)
 
     var files = helper.files.find(apiFilename)
 

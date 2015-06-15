@@ -20,8 +20,6 @@ exports.feature = function(router, feature, config) {
 
     var paths = feature.paths
 
-    console.log("\tAuth:", _.values(feature.path) )
-
 //    router.use(express.cookie());
 //    router.use(session({secret: SESSION_SECRET }));
 

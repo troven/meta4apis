@@ -31,8 +31,6 @@ exports.feature = function(router, feature, config) {
     // =============================================================================
     // application static files
 
-DEBUG&&console.log("\tAssets:", feature.path, "@", assetHome)
-
     // support local assets & inferred 'index.html' route
     router.use(feature.path, express.static(assetHome) );
 
