@@ -110,6 +110,9 @@ self.start = function(config) {
     // configure paths & directories
     config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
 
+    // environment friendly
+    process.title = config.name + " on port "+config.port
+
     console.log("[meta4] home dir:", config.home)
 
     // =============================================================================
@@ -133,7 +136,8 @@ self.start = function(config) {
         // we're good to go ...
 
         console.log("[meta4] ----------------------------------------")
-        console.log("[meta4] module  :", config.name, config.version || "0.0.0")
+        console.log("[meta4] NodeJS  :", process.version, "("+process.platform+")")
+        console.log("[meta4] module  :", "v"+config.name, config.version || "0.0.0")
         console.log('[meta4] login ->: http://' + config.host+":"+config.port+config.basePath, "\n");
     });
 
