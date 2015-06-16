@@ -19,12 +19,6 @@ exports.handle = function(req, res, crud, meta4) {
 
 console.log("CRUD:loki", crud.id, req.query)
 
-	// pointer to CRUD method
-	var fn = exports.handle[req.method]
-	if (!fn) {
-		return res.json( { status: "error", message:"unsupported method:"+req.method } );
-	}
-
 	// underlying database
 
 	var autosaveInterval = crud.adapter.autosaveInterval?crud.adapter.autosaveInterval:10000
@@ -32,10 +26,23 @@ console.log("CRUD:loki", crud.id, req.query)
 	var db = exports._db[crud.id]
 	 if (!db) {
 	    helper.files.mkdirs(crud.home)
-	    db = exports._db[crud.id] = new loki( filename, { autosave: true, autosaveInterval: autosaveInterval } );
-		console.log("Created Loki:", filename)
-		db.save()
+	    db = exports._db[crud.id] = new loki( filename, { autoload: true, autosave: true, autosaveInterval: autosaveInterval,
+	        autoloadCallback: function() {
+			    exports.handle.collection( req, res, crud, db )
+	        }
+	     } );
+	 } else {
+	    exports.handle.collection( req, res, crud, db )
 	 }
+
+}
+
+exports.handle.collection = function(req, res, crud, db) {
+	// pointer to CRUD method
+	var fn = exports.handle[req.method]
+	if (!fn) {
+		return res.json( { status: "error", message:"unsupported method:"+req.method } );
+	}
 
 	// get our collection
 	var collection = db.getCollection( crud.id )
@@ -54,9 +61,6 @@ console.log("CRUD:loki", crud.id, req.query)
 	} catch(e) {
 		return res.json( { status: "error", message:"Exception:"+e+" @ "+crud.id });
 	}
-
-console.log("CRUD:closed", crud.id)
-
 }
 
 // Create
