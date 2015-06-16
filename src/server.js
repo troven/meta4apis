@@ -137,7 +137,7 @@ self.start = function(config) {
 
         console.log("[meta4] ----------------------------------------")
         console.log("[meta4] NodeJS  :", process.version, "("+process.platform+")")
-        console.log("[meta4] module  :", "v"+config.name, config.version || "0.0.0")
+        console.log("[meta4] module  :", config.name, "v"+config.version || "0.0.0")
         console.log('[meta4] login ->: http://' + config.host+":"+config.port+config.basePath, "\n");
     });
 
