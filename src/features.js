@@ -137,3 +137,11 @@ self._configureFeature = function(meta4, options) {
         }
     } else throw "not a meta4 feature: "+options.requires
 }
+
+self.teardown = function(options) {
+    var fn   = self.__features[options.package] || require(options.requires);
+    if (fn.feature && fn.teardown) {
+        fn.teardown(options)
+    }
+
+}

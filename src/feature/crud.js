@@ -83,3 +83,7 @@ self.redirectCRUD = function(req, res, crud, meta4) {
     adapter.handle(req, res, crud, meta4)
 
 }
+
+self.teardown = function(options) {
+	console.log("\tclean-up: "+options.package)
+}

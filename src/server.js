@@ -104,6 +104,8 @@ self.start = function(config) {
     assert(config.name, "Missing {{name}}")
     assert(config.port, "Missing {{port}}")
 
+    console.log("[meta4] home dir:", config.home)
+
     // boot configuration
     var SESSION_SECRET = config.salt || "SECRET_"+config.name+"_"+new Date().getTime()
 
@@ -113,10 +115,9 @@ self.start = function(config) {
     // environment friendly
     process.title = config.name + " on port "+config.port
 	process.on( 'SIGINT', function() {
-		console.log("\n[meta4] user quit" );
-		process.exit();
+		console.log("\n[meta4] terminated by user ... au revoir" );
+		self.shutdown(config);
 	})
-    console.log("[meta4] home dir:", config.home)
 
     // =============================================================================
     // configure Express Router
@@ -146,3 +147,9 @@ self.start = function(config) {
 
 }
 
+self.shutdown = function(config) {
+	_.each(config.features, function(feature, key) {
+		features.teardown(feature)
+	})
+	process.exit();
+}
