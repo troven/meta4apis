@@ -112,7 +112,10 @@ self.start = function(config) {
 
     // environment friendly
     process.title = config.name + " on port "+config.port
-
+	process.on( 'SIGINT', function() {
+		console.log("\n[meta4] user quit" );
+		process.exit();
+	})
     console.log("[meta4] home dir:", config.home)
 
     // =============================================================================
