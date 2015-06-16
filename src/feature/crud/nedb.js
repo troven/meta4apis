@@ -17,7 +17,9 @@ var sendError = function(res, status, message) {
 
 exports.handle = function(req, res, meta, meta4) {
 
-    var config = meta.nedb || { path: meta4.homeDir+"/"+meta4.paths.data+"/"+meta.id }
+	var router = meta4.router, config = meta4.config
+
+    var config = meta.nedb || { path: meta4.home+"/"+meta4.paths.data+"/"+meta.id }
 
     assert(config.path, "{{nedb.path}} is missing")
 

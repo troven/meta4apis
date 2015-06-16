@@ -12,7 +12,7 @@ var upload     = require('../upload');       // upload
 // =============================================================================
 // handle model requests
 
-exports.handle = function(req, res, meta) {
+exports.handle = function(req, res, meta, meta4) {
 
     assert(meta.home, "CRUD FILE missing {{home}}")
     assert(meta.id, "CRUD FILE missing {{id}}")

@@ -24,7 +24,10 @@ self.install = function(feature, config) {
 
 // =============================================================================
 
-self.feature = function(router, feature, config) {
+self.feature = function(meta4, feature) {
+
+    assert(feature, "feature needs meta4")
+	var router = meta4.router, config = meta4.config
 
 	 // =============================================================================
 	 // dynamically route model / CRUD requests
@@ -37,12 +40,13 @@ self.feature = function(router, feature, config) {
 	 } );
 
 	 router.use(feature.path+'/about/:pack.:machine', function(req, res) {
-	    self.handle(req, res, feature, config)
+	    self.handle(req, res, feature, meta4)
 	 } );
 }
 
-self.handle = function (req, res, feature, config) {
-																	
+self.handle = function (req, res, feature, meta4) {
+	var router = meta4.router, config = meta4.config
+
 	// meta4 options
 	var options = feature.config[req.params.pack]
 	assert(feature.config[req.params.pack], "feature {{pack}} config missing for "+req.params.pack)
@@ -67,7 +71,7 @@ self.handle = function (req, res, feature, config) {
 		 return res.json( { id: req.params.pack+"."+req.params.machine, status: 'error', message: 'missing machine'} );
 	}
 
-	// execute the machine asynchronously
+	// execute the machine fn() asynchronously
 	var cmd = fn(meta)
 	var spec = _.omit(cmd, ["fn"])
 

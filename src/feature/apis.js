@@ -15,7 +15,9 @@ var helper     = require('meta4helpers');   // files & mixins
 // =============================================================================
 // configure the API routes
 
-exports.feature = function(router, feature, config) {
+exports.feature = function(meta4, feature) {
+
+	var router = meta4.router, config = meta4.config
 
     // TODO
 }

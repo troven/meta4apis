@@ -14,7 +14,9 @@ var assert          = require('assert');         // assertions
 
 // =============================================================================
 
-exports.feature = function(router, feature, config) {
+exports.feature = function(meta4, feature) {
+
+	var router = meta4.router, config = meta4.config
 
     assert(feature.path, "{{auth}} feature not configured")
 

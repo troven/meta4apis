@@ -53,6 +53,7 @@ self.announce = function() {
 |_| |_| |_|\\___|\\__\\__,_|  |_|\n\
                        by troven\n")
 }
+
 self.cli = function() {
     var argv       = require('minimist')(process.argv.slice(2));    // cmd line arguments
     var args = argv['_']
@@ -119,8 +120,10 @@ self.start = function(config) {
 // DEPRECATED: find alternative?
 // app.use(session({secret: SESSION_SECRET}));
 
-    // configure Features
-    features.configure(router, config)
+    // configure meta4 eatures
+    def meta4 = { router: router, config: config }
+
+    features.configure(meta4)
 
     // start HTTP server
     app.listen(config.port, function() {

@@ -17,7 +17,10 @@ var helper     = require('meta4helpers');   // files & mixins
 // =============================================================================
 // configure the API routes
 
-exports.feature = function(router, feature, config) {
+exports.feature = function(meta4, feature) {
+
+    assert(meta4, "feature needs meta4")
+	var router = meta4.router, config = meta4.config
 
     assert(feature.home, "{{home}} is missing")
     assert(feature.path, "{{path}} is missing")

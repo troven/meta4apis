@@ -90,8 +90,9 @@ self.defaults = function(config) {
     }, features.auth)
 }
 
-self.configure = function(router, config) {
+self.configure = function(meta4) {
 
+	var router = meta4.router, config = meta4.config
     assert(config.home, "Feature.configure is missing {{home}}")
 
     // default configuration
@@ -124,7 +125,7 @@ self.configure = function(router, config) {
         if (fn.feature) {
             fn.install && fn.install(options, config)
             try {
-	            fn.feature(router, options, config)
+	            fn.feature(meta4, options)
             } catch(e) {
                 console.log("Feature Failed", options.package, e)
             }

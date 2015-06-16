@@ -17,7 +17,10 @@ var helper     = require('meta4helpers');   // files & mixins
 // =============================================================================
 // Configure Upload Feature
 
-exports.feature = function(router, feature, meta4) {
+exports.feature = function(meta4, feature) {
+
+    assert(feature, "feature needs meta4")
+	var router = meta4.router, config = meta4.config
 
     // meta4ure Upload
     feature = _.defaults(feature, {
