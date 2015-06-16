@@ -50,8 +50,11 @@ self.announce = function() {
  _ __ ___   ___| |_ __ _| || |\n\
 | '_ ` _ \\ / _ \\ __/ _` | || |_\n\
 | | | | | |  __/ || (_| |__   _|\n\
-|_| |_| |_|\\___|\\__\\__,_|  |_|\n\
-                       by troven\n")
+|_| |_| |_|\\___|\\__\\__,_|  |_|")
+
+    var meta4node_pkg = require('../package.json');
+    console.log("\tv"+meta4node_pkg.version+" by troven\n")
+
 }
 
 self.cli = function() {
@@ -128,7 +131,10 @@ self.start = function(config) {
     // start HTTP server
     app.listen(config.port, function() {
         // we're good to go ...
-        console.log('[meta4] browse to: http://' + config.host+":"+config.port+config.basePath);
+
+        console.log("[meta4] ----------------------------------------")
+        console.log("[meta4] module  :", config.name, config.version || "0.0.0")
+        console.log('[meta4] login ->: http://' + config.host+":"+config.port+config.basePath, "\n");
     });
 
 }
