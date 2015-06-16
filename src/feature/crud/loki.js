@@ -49,6 +49,9 @@ exports.handle.collection = function(req, res, crud, db) {
 	if (!collection) {
 		// if not, create it
 		collection = db.addCollection( crud.id )
+		_.each(crud.data, function(data) {
+			collection.insert(data)
+		})
 	}
 
 	if (!collection) {

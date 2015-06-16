@@ -11,6 +11,9 @@ tmp
 # IntelliJ
 *.iml
 
+# OS X
+.DS_Store
+
 # Logs
 logs
 *.log

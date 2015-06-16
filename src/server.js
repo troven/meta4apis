@@ -85,7 +85,7 @@ self.boot = function(filename, options, callback) {
     fs.readFile(filename, function(error, data) {
         assert(!error, "Failed to boot:"+ filename)
         var config = JSON.parse(data);
-
+		config.home = paths.normalize(paths.dirname(filename)+"/"+config.home)
         // merge with runtime options
         config = _.extend(config, options)
         console.log("[meta4] booting :", paths.normalize(filename))
