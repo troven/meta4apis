@@ -33,20 +33,17 @@
     "cookie": "~0.1.3",
     "express": "~4.x.x",
     "express-session": "~1.11.2",
+    "lokijs": "^1.3.4",
     "machine": "~9.0.4",
     "meta4helpers": "~0.1.3",
     "minimist": "~1.1.1",
     "mkdirp": "~0.5.1",
     "multer": "~0.1.8",
-    "nedb": "~1.1.2",
     "optimist": "0.2.x",
     "passport": "~0.2.2",
     "passport-local": "~1.0.0",
-    "sails-mongo": "^0.11.2",
-    "swaggerize-express": "~4.0.2",
     "underscore": "~1.8.3",
-    "vhost": "~3.0.0",
-    "waterline": "^0.10.23"
+    "vhost": "~3.0.0"
   },
   "devDependencies": {}
 }

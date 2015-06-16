@@ -10,7 +10,7 @@ var assert     = require('assert');         // assertions
 // =============================================================================
 var Waterline  = require('waterline');      // waterline
 
-var mongodb = require('sails-mongodb');
+var mongodb = require('sails-mongo');
 
 // =============================================================================
 // handle model requests
@@ -24,6 +24,7 @@ exports.handle = function(req, res, meta, config) {
 	var options = {
         // Define a custom table name
         tableName: meta.id,
+        identity: "_id",
         // Set schema true/false for adapters that support schema-less
         schema: false,
         // Define an adapter to use

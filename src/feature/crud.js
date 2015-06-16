@@ -5,6 +5,7 @@ var self = module.exports
 
 var assert     = require('assert');         // assertions
 var fs         = require('fs');             // file system
+var _          = require('underscore');     // collections helper
 
 // =============================================================================
 // meta4 packages
@@ -38,30 +39,38 @@ self.feature = function(router, feature, config) {
                     req.body.json._id = req.parts[1]
                 }
 
+                // nested defaults
+                _.defaults(meta, { adapter:{}, schema: {}, defaults: {} } )
+
                 // delegate the request
                 if ( meta.store && (!meta.id || meta.id == collection) ) {
                     meta.home = meta.home || feature.data
-console.log("meta home: ", meta.home)
-                    return self.handle(req, res, meta, config)
+
+                    // ensure store is remote
+                    if (!meta.isServer && !meta.isRemote) {
+                        return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
+                    }
+
+                    return self.redirectCRUD(req, res, meta, config)
                 }
             }
 
-            // something went wrong
-            res.status = 404;
-            return res.send('unknown collection: '+collection);
+            return res.json( { status: "failed", message: "Missing model: "+collection });
         })
     });
 
 }
 
 // =============================================================================
-// Handle CRUD operations
+// Redirect CRUD operations
 
-self.handle = function(req, res, meta, config) {
+self.redirectCRUD = function(req, res, meta, config) {
 
-    // acquire the proxy
-    var store = meta.store || "file"
+    // acquire the adapter
+    var store = meta.store || meta.adapter.type || "loki"
     var crud = require("./crud/"+store)
+    if (!crud)
+        return res.json( { status: "failed", message: "Missing store: "+store });
 
     // dynamic delegation
     crud.handle(req, res, meta, config)
