@@ -120,8 +120,8 @@ self.start = function(config) {
 // DEPRECATED: find alternative?
 // app.use(session({secret: SESSION_SECRET}));
 
-    // configure meta4 eatures
-    def meta4 = { router: router, config: config }
+    // configure meta4
+    var meta4 = { router: router, config: config }
 
     features.configure(meta4)
 

@@ -38,28 +38,31 @@ self.feature = function(meta4, feature) {
         fs.readFile(file, function(error, data) {
             if (!error) {
                 var crud = JSON.parse(data)
-                if (req.parts.length>1 && req.body.json) {
-                    req.body.json._id = req.parts[1]
+                // ensure store is remote
+                if (!crud.isServer && !crud.isRemote) {
+                    return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
                 }
 
-                // nested defaults
-                _.defaults(crud, { adapter: {}, schema: {}, defaults: {} } )
+                // default CRUD meta-data
+                _.defaults(crud, { idAttribute: "_id", adapter: {}, schema: {}, defaults: {} } )
+
+				// handle path args
+                if (req.parts.length>1 && req.body.json) {
+                    req.body.json[crud.idAttribute] = req.parts[1]
+                }
 
                 // delegate the request
-                if ( crud.store && (!crud.id || crud.id == collection) ) {
-                    crud.home = crud.home || feature.data
+                if ( (!crud.id || crud.id == collection) ) {
 
-                    // ensure store is remote
-                    if (!crud.isServer && !crud.isRemote) {
-                        return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
-                    }
+                    // path where storage saves it's data
+                    crud.home = crud.home || feature.data
 
                     // dispatch the request to CRUD
                     return self.redirectCRUD(req, res, crud, meta4)
                 }
             }
 
-            return res.json( { status: "failed", message: "Missing model: "+collection });
+            return res.json( { status: "failed", message: "Missing model: "+collection, errors: [ file ] });
         })
     });
 
@@ -72,11 +75,11 @@ self.redirectCRUD = function(req, res, crud, meta4) {
 
     // acquire the adapter
     var store = crud.store || crud.adapter.type || "loki"
-    var crud = require("./crud/"+store)
-    if (!crud)
-        return res.json( { status: "failed", message: "missing store "+store });
+    var adapter = require("./crud/"+store)
+    if (!adapter)
+        return res.json( { status: "failed", message: "missing adapter: "+store });
 
-    // dynamic delegation
-    crud.handle(req, res, crud, config)
+    // delegate to the adapter
+    adapter.handle(req, res, crud, meta4)
 
 }

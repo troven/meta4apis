@@ -116,21 +116,24 @@ self.configure = function(meta4) {
 
     // naively prioritize routes based - shortest paths first
     _.each(sorted, function(options) {
-
-        if (options.disabled) { console.log("[meta4] disabled:", options.package); return; }
-
-        var fn   = self.__features[options.package] || require(options.requires);
-
-        console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
-        if (fn.feature) {
-            fn.install && fn.install(options, config)
-            try {
-	            fn.feature(meta4, options)
-            } catch(e) {
-                console.log("Feature Failed", options.package, e)
-            }
-        } else throw "not a meta4 feature: "+options.requires
+		self._configureFeature(meta4, options)
     })
 
     return
+}
+
+self._configureFeature = function(meta4, options) {
+    if (options.disabled) { console.log("[meta4] disabled:", options.package); return; }
+
+    var fn   = self.__features[options.package] || require(options.requires);
+    console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
+
+    if (fn.feature) {
+        fn.install && fn.install(options, meta4.config)
+        try {
+            fn.feature(meta4, options)
+        } catch(e) {
+            console.log("Feature Failed", options.package, e)
+        }
+    } else throw "not a meta4 feature: "+options.requires
 }
