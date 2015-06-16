@@ -21,7 +21,7 @@ console.log("CRUD:loki", crud.id, req.query)
 
 	// underlying database
 
-	var autosaveInterval = crud.adapter.autosaveInterval?crud.adapter.autosaveInterval:10000
+	var autosaveInterval = crud.adapter.autosaveInterval?crud.adapter.autosaveInterval:3000
 	var filename = crud.home+"/"+crud.id+".db"
 	var db = exports._db[crud.id]
 	 if (!db) {
