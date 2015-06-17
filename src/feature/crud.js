@@ -12,6 +12,8 @@ var _          = require('underscore');     // collections helper
 
 //var helper     = require('meta4helpers');   // files & mixins
 
+var upload      = require('./upload');        // uploads & attachments
+
 var DEFAULT_ADAPTER = "loki"
 var ID_ATTRIBUTE    = "_id"
 var HTTP_TO_CRUD = { "POST": "create", "GET": "read", "PUT": "update", "DELETE": "delete"}
@@ -29,11 +31,16 @@ self.feature = function(meta4, feature) {
     // =============================================================================
     // dynamically route model / CRUD requests
 
-    router.use(feature.path+'/*', function(req, res) {
 
-        var params = req.params[0]          // decode the wild-card
-        req.parts  = params.split("/")      // slice into {{collection}}/{{model}}
-        var collection = req.parts[0]       // {{collection}}
+    router.use(feature.path+'/:collection/_upload_', upload.uploader( feature.upload || meta4.config.features.upload ))
+
+    router.use(feature.path+'/:collection/:id?', function(req, res, next) {
+
+		 var collection = req.params.collection
+		 var id = req.params.id
+
+		 // ugly hack to prevent match on duplicate routes
+		 if (id == "_upload_" ) return next()
 
         // path to the meta-data definition
         var file = feature.home+"/"+collection+".json"
@@ -43,64 +50,73 @@ self.feature = function(meta4, feature) {
             if (!error) {
                 var crud = JSON.parse(data)
 
+			    // default CRUD meta-data
+			    _.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} } )
+
 			    if (!crud.isServer && !crud.isRemote) {
 			        return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
 			    }
 
 				// handle path args
-			    if (req.parts.length>1 && req.body.json) {
-			        req.body.json[crud.idAttribute] = req.parts[1]
+			    if (id && req.body.json) {
+			        req.body.json[crud.idAttribute || ID_ATTRIBUTE] = id
 			    }
 
-			    // delegate the request
+			    // make sure request matches the definition
 			    if ( crud.id == collection ) {
 			        crud.home = crud.home || feature.data
-	                return self.resolveCRUD(req, res, crud, meta4)
+
+					// convert to a CRUD operation
+					var action = HTTP_TO_CRUD[req.method]
+					var cmd = { action: action, meta: req.query, data: _.extend({}, req.body) }
+
+					// resolve CRUD & return result to browser
+	                return self.execute( cmd, crud, function(result) {
+					    res.json(result)
+	                } )
                 }
             }
 
             return res.json( { status: "failed", message: "Missing model: "+collection, errors: [ file ] });
         })
     });
-
 }
 
 // =============================================================================
-// Redirect to CRUD Adapter
 
-self.resolveCRUD = function(req, res, crud, meta4) {
+self.executeXXX = function(cmd, crud, cb) {
+}
 
-    // default CRUD meta-data
+
+// =============================================================================
+// Redirect CMD to CRUD Adapter
+
+self.execute = function(cmd, crud, cb) {
 
     _.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} } )
 
     // acquire the adapter
-
-    var store = crud.store || crud.adapter.type || DEFAULT_ADAPTER
+	var action  = cmd.action
+    var store   = crud.store || crud.adapter.type || DEFAULT_ADAPTER
     var adapter = require("./crud/"+store)
 
 	// send error
-
-    if (!adapter) return res.json( { status: "failed", message: "missing adapter: "+store });
+    if (!adapter) return cb && cb( { status: "failed", message: "missing adapter: "+store });
 
 	// resolve adapter action fn()
-
-	var action = HTTP_TO_CRUD[req.method]
 	var fn = adapter[action]
 	if (!fn) {
-		return res.json( { status: "error", message: "unsupported method:"+req.method } );
+		return cb && cb( { status: "error", message: "unsupported method:"+action } );
 	}
 
-	var cmd = { meta: req.query, data: _.extend({}, req.body) }
-
     // delegate to the adapter && send JSON result to client
-
-    return fn(cmd, crud, function(result) {
-	    res.json(result)
-    })
+    return fn(cmd, crud, cb)
 
 }
 
 self.teardown = function(options) {
 	console.log("\tclean-up: "+options.package)
+	_.each(self._db, function(db) {
+
+	})
 }

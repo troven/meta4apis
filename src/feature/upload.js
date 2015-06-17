@@ -13,6 +13,7 @@ var _          = require('underscore');     // collections helper
 // meta4 packages
 
 var helper     = require('meta4helpers');   // files & mixins
+var crud       = require('./crud');           // CRUD
 
 // =============================================================================
 // Configure Upload Feature
@@ -38,35 +39,56 @@ exports.feature = function(meta4, feature) {
     // =============================================================================
     // meta4ure multi-part file upload
 
+    router.use(feature.path, exports.uploader(feature));
+
+}
+
+exports.uploader = function(feature) {
+
     var uploadDir = feature.home
     helper.files.mkdirs(uploadDir)
 
-    router.use(feature.path, multer({
+console.log("[meta4] Upload attached: ", feature.path)
+
+	return multer({
+
         limits: feature.limits,
         dest: uploadDir,
+        putSingleFilesInArray: true,
+
         rename: function (fieldname, filename) {
 //            fs.mkdirSync(uploadDir+"/"+fieldname)
             return Date.now()+"_"+filename;
         },
+
         onFileUploadStart: function (file, req, res) {
-//            console.log(file.originalname + ' is starting ...')
+            console.log("Uploading:", file.originalname, req.body)
         },
+
         onFileUploadComplete: function (file, req, res) {
-            file.model_id = req.body.id
-            file.id = file.name
             file.label = file.originalname
 
-            console.log(file.fieldname, 'uploaded:', file)
+console.log("[meta4] Uploaded:", file, req.query)
 
             delete file.originalname
             delete file.path;       // obfuscate local directory
             delete file.buffer;     // don't round-trip
 
-            //TODO: store 'file' meta-data in a data store
-            fs.writeFile(file.path+".json", JSON.stringify(file))
+			if (req.query.collection) {
+				console.log("Upload Saving", req.query)
+				crud.execute( { action: "create", data: file }, { id: req.query.collection, home: feature.home }, function(result) {
+					console.log("Upload Saved", result)
+				})
+//	            //TODO: store 'file' meta-data in a data store
+//	            fs.writeFile(file.path+".json", JSON.stringify(file))
+			}
 
-            res.json( { data: _.pick(file,'id', 'label', "size", "mimetype"), status: 'success' } )
+            res.json( { data: _.pick(file, 'name', 'label', "size", "mimetype"), status: 'success' } )
+        },
+
+        onParseEnd: function(req, next) {
+console.log("[meta4] Upload Complete:", req.body)
         }
-    }));
 
+    })
 }

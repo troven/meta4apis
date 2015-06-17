@@ -11,14 +11,15 @@ var helper     = require('meta4helpers');   // files & mixins
 var loki       = require('lokijs');         // loki
 
 var DEBUG = false
-// =============================================================================
-// handle model requests
-
 exports._db = {}
+
+// =============================================================================
+// safely acquire a Collection
 
 exports.getCollection = function(crud, cb) {
 
 	DEBUG && console.log("CRUD:loki", crud.id)
+	assert(crud.home, "CRUD Loki required a home")
 
 	// underlying database
 
@@ -61,7 +62,9 @@ exports._getCollection = function(crud, db, cb) {
 	return collection
 }
 
+// =============================================================================
 // Create
+
 exports.create = function(query, crud, cb) {
 
 	exports.getCollection(crud, function(err, collection) {
@@ -85,7 +88,9 @@ exports.create = function(query, crud, cb) {
 
 }
 
+// =============================================================================
 // Read / GET
+
 exports.read = function(query, crud, cb) {
 
 	exports.getCollection(crud, function(err, collection) {
@@ -105,7 +110,9 @@ exports.read = function(query, crud, cb) {
 	})
 }
 
+// =============================================================================
 // Update / PUT
+
 exports.update = function(query, crud, cb) {
 
 	exports.getCollection(crud, function(err, collection) {
@@ -126,7 +133,9 @@ exports.update = function(query, crud, cb) {
 
 }
 
+// =============================================================================
 // Delete / DELETE
+
 exports.delete = function(query, crud, cb) {
 
 	exports.getCollection(crud, function(err, collection) {

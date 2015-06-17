@@ -30,7 +30,6 @@ exports.install = function(path, filename) {
 
     require("./features").defaults(_defaults)
 
-    var dir = helper.files.mkdirs(path)
     var configFile = filename
     var data =  JSON.stringify(_defaults)
 
