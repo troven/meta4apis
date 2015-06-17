@@ -13,8 +13,15 @@ The result is responsive, maintainable application that can be rapidly construct
 
 Meta4's meta-model defines and orchestrates your application models, views, business logic and HTML templates.
 
-
 meta4beta is based on Backbone & Marionette, because they provide a minimally opinated framework that is easy to understand, extend and scale.
+
+You can find out more by reading:
+
+<a href="https://github.com/troven/meta4ux/wiki/Intro">Introduction</a>.
+
+<a href="https://github.com/troven/meta4ux/wiki/UX---User-Experience">User Experience</a>.
+
+<a href="https://github.com/troven/meta4ux/wiki/Views">Views</a>.
 
 
 
