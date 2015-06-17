@@ -12,6 +12,10 @@ var _          = require('underscore');     // collections helper
 
 //var helper     = require('meta4helpers');   // files & mixins
 
+var DEFAULT_ADAPTER = "loki"
+var ID_ATTRIBUTE    = "_id"
+var HTTP_TO_CRUD = { "POST": "create", "GET": "read", "PUT": "update", "DELETE": "delete"}
+
 // =============================================================================
 // Configure CRUD Feature
 
@@ -38,27 +42,20 @@ self.feature = function(meta4, feature) {
         fs.readFile(file, function(error, data) {
             if (!error) {
                 var crud = JSON.parse(data)
-                // ensure store is remote
-                if (!crud.isServer && !crud.isRemote) {
-                    return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
-                }
 
-                // default CRUD meta-data
-                _.defaults(crud, { idAttribute: "_id", adapter: {}, schema: {}, defaults: {} } )
+			    if (!crud.isServer && !crud.isRemote) {
+			        return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
+			    }
 
 				// handle path args
-                if (req.parts.length>1 && req.body.json) {
-                    req.body.json[crud.idAttribute] = req.parts[1]
-                }
+			    if (req.parts.length>1 && req.body.json) {
+			        req.body.json[crud.idAttribute] = req.parts[1]
+			    }
 
-                // delegate the request
-                if ( (!crud.id || crud.id == collection) ) {
-
-                    // path where storage saves it's data
-                    crud.home = crud.home || feature.data
-
-                    // dispatch the request to CRUD
-                    return self.redirectCRUD(req, res, crud, meta4)
+			    // delegate the request
+			    if ( crud.id == collection ) {
+			        crud.home = crud.home || feature.data
+	                return self.resolveCRUD(req, res, crud, meta4)
                 }
             }
 
@@ -69,18 +66,38 @@ self.feature = function(meta4, feature) {
 }
 
 // =============================================================================
-// Redirect CRUD operations
+// Redirect to CRUD Adapter
 
-self.redirectCRUD = function(req, res, crud, meta4) {
+self.resolveCRUD = function(req, res, crud, meta4) {
+
+    // default CRUD meta-data
+
+    _.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} } )
 
     // acquire the adapter
-    var store = crud.store || crud.adapter.type || "loki"
-    var adapter = require("./crud/"+store)
-    if (!adapter)
-        return res.json( { status: "failed", message: "missing adapter: "+store });
 
-    // delegate to the adapter
-    adapter.handle(req, res, crud, meta4)
+    var store = crud.store || crud.adapter.type || DEFAULT_ADAPTER
+    var adapter = require("./crud/"+store)
+
+	// send error
+
+    if (!adapter) return res.json( { status: "failed", message: "missing adapter: "+store });
+
+	// resolve adapter action fn()
+
+	var action = HTTP_TO_CRUD[req.method]
+	var fn = adapter[action]
+	if (!fn) {
+		return res.json( { status: "error", message: "unsupported method:"+req.method } );
+	}
+
+	var cmd = { meta: req.query, data: _.extend({}, req.body) }
+
+    // delegate to the adapter && send JSON result to client
+
+    return fn(cmd, crud, function(result) {
+	    res.json(result)
+    })
 
 }
 

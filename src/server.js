@@ -127,8 +127,12 @@ self.start = function(config) {
     // configure Express
     app.use(config.basePath, router);
 
-// DEPRECATED: find alternative?
-// app.use(session({secret: SESSION_SECRET}));
+
+	// DEPRECATED: find alternative?
+	// app.use(session({secret: SESSION_SECRET}));
+
+//    app.use( require("compress")() );
+//	  app.use( express.favicon(config.brand.favicon || "./src/public/brand/favicon.png") )
 
     // configure meta4
     var meta4 = { router: router, config: config }

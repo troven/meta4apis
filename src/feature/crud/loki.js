@@ -10,39 +10,39 @@ var helper     = require('meta4helpers');   // files & mixins
 
 var loki       = require('lokijs');         // loki
 
+var DEBUG = false
 // =============================================================================
 // handle model requests
 
 exports._db = {}
 
-exports.handle = function(req, res, crud, meta4) {
+exports.getCollection = function(crud, cb) {
 
-console.log("CRUD:loki", crud.id, req.query)
+	DEBUG && console.log("CRUD:loki", crud.id)
 
 	// underlying database
 
+	var db = exports._db[crud.id]
+	if (db) {
+	    // already initialized ..
+	    exports._getCollection( crud, db, cb )
+	    return
+	}
+
+	// initialize database
 	var autosaveInterval = crud.adapter.autosaveInterval?crud.adapter.autosaveInterval:3000
 	var filename = crud.home+"/"+crud.id+".db"
-	var db = exports._db[crud.id]
-	 if (!db) {
-	    helper.files.mkdirs(crud.home)
-	    db = exports._db[crud.id] = new loki( filename, { autoload: true, autosave: true, autosaveInterval: autosaveInterval,
-	        autoloadCallback: function() {
-			    exports.handle.collection( req, res, crud, db )
-	        }
-	     } );
-	 } else {
-	    exports.handle.collection( req, res, crud, db )
-	 }
+    helper.files.mkdirs(crud.home)
 
+    // load Loki - callback when done
+    db = exports._db[crud.id] = new loki( filename, { autoload: true, autosave: true, autosaveInterval: autosaveInterval,
+        autoloadCallback: function() {
+		    exports._getCollection( crud, db, cb )
+        }
+     } );
 }
 
-exports.handle.collection = function(req, res, crud, db) {
-	// pointer to CRUD method
-	var fn = exports.handle[req.method]
-	if (!fn) {
-		return res.json( { status: "error", message:"unsupported method:"+req.method } );
-	}
+exports._getCollection = function(crud, db, cb) {
 
 	// get our collection
 	var collection = db.getCollection( crud.id )
@@ -54,66 +54,95 @@ exports.handle.collection = function(req, res, crud, db) {
 		})
 	}
 
-	if (!collection) {
-		return res.json( { status: "failed", message:"loki collection not found:"+crud.id });
+	if (cb) {
+		if (!collection)  cb("loki collection not found:"+crud.id, null)
+		else cb(null, collection)
 	}
-
-	// delegate to CRUD method
-	try {
-		fn( req, res, crud, collection )
-	} catch(e) {
-		return res.json( { status: "error", message:"Exception:"+e+" @ "+crud.id });
-	}
+	return collection
 }
 
 // Create
-exports.handle.POST = function(req, res, crud, collection) {
+exports.create = function(query, crud, cb) {
 
-	var data = _.extend({}, req.query, req.body)
-	console.log("[loki] create:",crud.id, data)
+	exports.getCollection(crud, function(err, collection) {
+		if (err) {
+			cb && cb( { status: "failed", message: err })
+			return false
+		}
 
-	var found = collection.insert(data)
+		DEBUG && console.log("[loki] create:",crud.id, query.data)
 
-	// externalize ID attribute
-	data[crud.idAttribute] = data["$loki"]
+		var found = collection.insert(query.data)
 
-	console.log("[loki] created:",crud.id, found)
-	return res.json( { status: "success", data: data, meta: { schema: crud.schema } });
-}
+		// externalize ID attribute
+		query.data[crud.idAttribute] = query.data["$loki"]
+		DEBUG && console.log("[loki] created:",crud.id, found)
 
-// Read
-exports.handle.GET = function(req, res, crud, collection) {
+		// we're done
+		cb && cb({ status: "success", data: query.data, meta: { schema: crud.schema } })
 
-	var query = _.extend({}, req.body)
-	console.log("[loki] read:",crud.id, req.query, req.body)
-
-	var found = collection.find(query)
-	console.log("[loki] found:",crud.id, found)
-
-	return res.json( { status: "success", data: found, meta: { filter: query, schema: crud.schema, count: found.length } });
-}
-
-// Update
-exports.handle.PUT = function(req, res, crud, collection) {
-	console.log("[loki] update:",crud.id, req.query, req.body)
-
-	var data = _.extend({}, req.body)
-	var found = collection.update(data)
-	console.log("[loki] updated:", req.method, crud.id, data, found)
-
-	return res.json( { status: "success", data: data, meta: { schema: crud.schema } });
+	})
 
 }
 
-// Delete
-exports.handle.DELETE = function(req, res, crud, collection) {
+// Read / GET
+exports.read = function(query, crud, cb) {
 
-	var data = _.extend({}, req.body)
-	console.log("[loki] delete:",crud.id, data)
+	exports.getCollection(crud, function(err, collection) {
 
-	var found = collection.removeWhere(data)
-	console.log("[loki] deleted:",crud.id, found)
+		if (err) {
+			cb && cb( { status: "failed" , message: err })
+			return false
+		}
 
-	return res.json( { status: "success", data: {}, meta: { schema: crud.schema } });
+		DEBUG && console.log("[loki] read:",crud.id, query.meta )
+
+		var found = collection.find(query.meta)
+		DEBUG && console.log("[loki] found:", crud.id, found)
+
+		// we're done
+		cb && cb( { status: "success", data: found, meta: { filter: query.meta, schema: crud.schema, count: found.length } });
+	})
+}
+
+// Update / PUT
+exports.update = function(query, crud, cb) {
+
+	exports.getCollection(crud, function(err, collection) {
+
+		if (err) {
+			cb && cb( { status: "failed", message: err })
+			return false
+		}
+
+		DEBUG && console.log("[loki] update:", crud.id, query.data)
+
+		var found = collection.update(query.data)
+		DEBUG && console.log("[loki] updated:", crud.id, query.data, found)
+
+		// we're done
+		cb && cb( { status: "success", data: query.data, meta: { schema: crud.schema } });
+	})
+
+}
+
+// Delete / DELETE
+exports.delete = function(query, crud, cb) {
+
+	exports.getCollection(crud, function(err, collection) {
+
+		if (err) {
+			cb && cb( { status: "failed", message: err })
+			return false
+		}
+
+		DEBUG && console.log("[loki] delete:", crud.id, query.data)
+
+		var found = collection.removeWhere(query.data)
+		DEBUG && console.log("[loki] deleted:",crud.id, found)
+
+		// we're done
+		cb & cb( { status: "success", data: {}, meta: { schema: crud.schema } });
+	})
 }
 
