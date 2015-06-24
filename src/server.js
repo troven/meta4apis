@@ -7,7 +7,7 @@ var BOOT_FILE = "meta4.json"
 // =============================================================================
 // framework packages
 
-var express    = require('express');        // call express
+var express    = require('express');        // expressJS
 var vhost      = require('vhost');          // name-based virtual hosting
 var bodyParser = require('body-parser');    // handle POST bodies
 var cookie     = require('cookie');         // cookie parser
@@ -22,10 +22,13 @@ var _          = require('underscore');     // collections helper
 // =============================================================================
 // meta4 packages
 
-var features = require('./features');       // features
-var install  = require('./install');        // grunt-powered installer
+var features    = require('./features');        // features
+var install     = require('./install');         // grunt-powered installer
 
-var app        = express();                 // create app using express
+// server bootstrap
+var app         = express();                    // create app using express
+var httpd       = require('http').Server(app);  // create app server
+var io          = require('socket.io')(httpd);  // networked events
 
 // =============================================================================
 // support POST payloads
@@ -112,7 +115,7 @@ self.start = function(config) {
     // configure paths & directories
     config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
 
-    // environment friendly
+    // environmentally friendly
     process.title = config.name + " on port "+config.port
 	process.on( 'SIGINT', function() {
 		console.log("\n[meta4] terminated by user ... au revoir" );
@@ -127,7 +130,6 @@ self.start = function(config) {
     // configure Express
     app.use(config.basePath, router);
 
-
 	// DEPRECATED: find alternative?
 	// app.use(session({secret: SESSION_SECRET}));
 
@@ -135,20 +137,28 @@ self.start = function(config) {
 //	  app.use( express.favicon(config.brand.favicon || "./src/public/brand/favicon.png") )
 
     // configure meta4
-    var meta4 = { router: router, config: config }
+    var meta4 = { router: router, io: io, config: config }
 
     features.configure(meta4)
 
     // start HTTP server
-    app.listen(config.port, function() {
+    httpd.listen(config.port, function() {
         // we're good to go ...
-
         console.log("[meta4] ----------------------------------------")
         console.log("[meta4] NodeJS  :", process.version, "("+process.platform+")")
         console.log("[meta4] module  :", config.name, "v"+config.version || "0.0.0")
         console.log('[meta4] login ->: http://' + config.host+":"+config.port+config.basePath, "\n");
     });
 
+	// TODO: fix client-side bug
+//    io.on('connection', function (socket) {
+//        console.log("[meta4] socket io")
+//        socket.emit("hello");
+//
+//        setInterval(function() {
+//            socket.emit("hello");
+//        },5000)
+//    });
 }
 
 self.shutdown = function(config) {

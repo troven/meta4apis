@@ -5,6 +5,7 @@ var self = module.exports = {}
 
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
+var paths      = require('path');           // file path helper
 
 // =============================================================================
 // meta4 packages
@@ -125,7 +126,9 @@ self.configure = function(meta4) {
 self._configureFeature = function(meta4, options) {
     if (options.disabled) { console.log("[meta4] disabled:", options.package); return; }
 
-    var fn   = self.__features[options.package] || require(options.requires);
+	var pkg = options.requires || options.package
+
+    var fn   = self.__features[options.package] || require( pkg );
     console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
 
     if (fn.feature) {

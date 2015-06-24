@@ -20,13 +20,16 @@ var crud       = require('./crud');           // CRUD
 
 exports.feature = function(meta4, feature) {
 
-    assert(feature, "feature needs meta4")
+    assert(feature, "feature-missing")
+    assert(meta4.router, "feature needs meta4.router")
+    assert(meta4.config, "feature needs meta4.config")
 	var router = meta4.router, config = meta4.config
 
     // meta4ure Upload
     feature = _.defaults(feature, {
         path: "/upload",
         home: "uploads",
+        can: { download: true },
         limits: {
             fieldNameSize: 100,
             files: 2,
@@ -39,7 +42,10 @@ exports.feature = function(meta4, feature) {
     // =============================================================================
     // meta4ure multi-part file upload
 
-    router.use(feature.path, exports.uploader(feature));
+    router.post(feature.path, exports.uploader(feature));
+    if (feature.can.download) {
+        router.get(feature.path+"/*", exports.downloader(feature));
+    }
 
 }
 
@@ -48,47 +54,78 @@ exports.uploader = function(feature) {
     var uploadDir = feature.home
     helper.files.mkdirs(uploadDir)
 
-console.log("[meta4] Upload attached: ", feature.path)
+console.log("[meta4] Upload Attached: ", feature.path)
 
-	return multer({
+    return function(req, res, next) {
+        var _multer =  multer({
 
-        limits: feature.limits,
-        dest: uploadDir,
-        putSingleFilesInArray: true,
+            limits: feature.limits,
+            dest: uploadDir,
+            putSingleFilesInArray: true,
 
-        rename: function (fieldname, filename) {
-//            fs.mkdirSync(uploadDir+"/"+fieldname)
-            return Date.now()+"_"+filename;
-        },
+            rename: function (fieldname, filename) {
+                var renamed = filename.replace(/[\W]/gi, '_')
+    //            fs.mkdirSync(uploadDir+"/"+fieldname)
+                if (req.query.collection) {
+                    renamed = Date.now()+"/"+renamed
+                }
+                if (req.query.id) {
+                    renamed = req.query.id+"/"+renamed
+                }
+console.log("Rename using", req.query, renamed)
+                return renamed.replace(/[\W]/gi, '/')
+            },
 
-        onFileUploadStart: function (file, req, res) {
-            console.log("Uploading:", file.originalname, req.body)
-        },
+            onFileUploadStart: function (file, req, res) {
+                console.log("Uploading:", file.originalname, req.body)
+                helper.files.mkdirs(path.basename(file))
+            },
 
-        onFileUploadComplete: function (file, req, res) {
-            file.label = file.originalname
+            onFileUploadComplete: function (file, req, res) {
+                file.label = file.originalname || file.name
+                feature.baseURL = feature.baseURL || ""
 
-console.log("[meta4] Uploaded:", file, req.query)
+console.log("[meta4] Uploaded:", feature.path, file, req.query)
 
-            delete file.originalname
-            delete file.path;       // obfuscate local directory
-            delete file.buffer;     // don't round-trip
+                delete file.originalname
+                delete file.path;       // obfuscate local directory
+                delete file.buffer;     // don't round-trip
 
-			if (req.query.collection) {
-				console.log("Upload Saving", req.query)
-				crud.execute( { action: "create", data: file }, { id: req.query.collection, home: feature.home }, function(result) {
-					console.log("Upload Saved", result)
-				})
-//	            //TODO: store 'file' meta-data in a data store
-//	            fs.writeFile(file.path+".json", JSON.stringify(file))
-			}
+                file.url = (feature.baseURL?feature.baseURL:feature.path+"/") + file.name
 
-            res.json( { data: _.pick(file, 'name', 'label', "size", "mimetype"), status: 'success' } )
-        },
+                if (req.query.collection) {
+                    console.log("Upload Saving", req.query)
+                    crud.execute( { action: "create", data: file }, { id: req.query.collection, home: feature.home }, function(result) {
+                        console.log("Upload Saved", result)
+                    })
+    //	            //TODO: store 'file' meta-data in a data store
+    //	            fs.writeFile(file.path+".json", JSON.stringify(file))
+                }
 
-        onParseEnd: function(req, next) {
-console.log("[meta4] Upload Complete:", req.body)
-        }
+                helper.files.mkdirs(path.basename(file))
+                res.json( { data: _.pick(file, 'name', 'url', 'label', "size", "mimetype"), status: 'success' } )
+            },
 
-    })
+            onParseEnd: function(req, next) {
+console.log("[meta4] Upload Complete:", req.query, req.body)
+                next()
+            }
+
+        })
+        return _multer(req,res, next)
+    }
+
+}
+
+exports.downloader = function(feature) {
+
+    var uploadDir = feature.home
+    helper.files.mkdirs(uploadDir)
+    console.log("[meta4] Download attached: ", uploadDir, "@", feature.path+"/*")
+
+    return function(req, res, next) {
+        var filename = path.resolve(uploadDir+req.path.substring(feature.path.length))
+console.log("[meta4] Download:", filename)
+        res.sendFile(filename)
+    }
 }

@@ -29,12 +29,13 @@ self.feature = function(meta4, feature) {
     assert(feature, "feature needs meta4")
 	var router = meta4.router, config = meta4.config
 
-	 // =============================================================================
+	// =============================================================================
+
+	// sanity check
+	assert(feature, "{{machine}} feature not configured")
+	assert(feature.path, "{{machine}} path not configured")
+
 	 // dynamically route model / CRUD requests
-
-	 assert(feature, "{{machine}} feature not configured")
-	 assert(feature.path, "{{machine}} path not configured")
-
 	 router.use(feature.path+'/:pack.:machine', function(req, res) {
 	    self.handle(req, res, feature, config)
 	 } );

@@ -72,6 +72,7 @@ self.feature = function(meta4, feature) {
 
 					// resolve CRUD & return result to browser
 	                return self.execute( cmd, crud, function(result) {
+		                result["@id"] = req.baseUrl
 					    res.json(result)
 	                } )
                 }
