@@ -36,7 +36,6 @@ var io          = false // require('socket.io')(httpd);  // networked events
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-
 // =============================================================================
 // Event-based API
 
