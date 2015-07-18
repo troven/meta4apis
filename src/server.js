@@ -28,7 +28,7 @@ var install     = require('./install');         // grunt-powered installer
 // server bootstrap
 var app         = express();                    // create app using express
 var httpd       = require('http').Server(app);  // create app server
-var io          = require('socket.io')(httpd);  // networked events
+var io          = false // require('socket.io')(httpd);  // networked events
 
 // =============================================================================
 // support POST payloads
