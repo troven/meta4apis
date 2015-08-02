@@ -10,9 +10,9 @@ var BOOT_FILE = "meta4.json"
 var express    = require('express');        // expressJS
 var vhost      = require('vhost');          // name-based virtual hosting
 var bodyParser = require('body-parser');    // handle POST bodies
-var cookie     = require('cookie');         // cookie parser
+var cookies    = require('cookie-parser');  // cookie parser
 var session    = require('express-session');// session support
-var passport   = require('passport');       // passport
+var methodz    = require('method-override');// method override
 var assert     = require('assert');         // assertions
 var crypto     = require('crypto');         // encryption
 var fs         = require('fs');             // file system
@@ -70,7 +70,7 @@ self.cli = function() {
             var pkg = err?{ name: "meta4demo", version: "0.0.0" }:JSON.parse(data)
             install.install(pkg.name, BOOT_FILE, argv)
             self.announce()
-            self.boot(BOOT_FILE, argv)
+            self.boot(BOOT_FILE, _.extend(argv,pkg) )
         })
     }
 
@@ -126,21 +126,37 @@ self.start = function(config) {
 
     var router = express.Router();              // get an instance of the express Router
 
-    // configure Express
-    app.use(config.basePath, router);
+	// Cookies
+	app.use(cookies());
 
-	// DEPRECATED: find alternative?
-	// app.use(session({secret: SESSION_SECRET}));
+	// JSON Body Parser
+	app.use(bodyParser.urlencoded({ extended: true }));
+	app.use(bodyParser.json());
+
+	// Sessions
+	app.use(session({
+		secret: SESSION_SECRET,
+		name: "meta4"+config.name,
+		proxy: true,
+		resave: true,
+		saveUninitialized: true
+	}));
+
+	// Useful Upgrades
+	app.use(require('flash')());
+	app.use(methodz('X-HTTP-Method-Override'));
 
 //    app.use( require("compress")() );
 //	  app.use( express.favicon(config.brand.favicon || "./src/public/brand/favicon.png") )
 
-    // configure meta4
-    var meta4 = { router: router, io: io, config: config }
+	// configure Express Router
+	app.use(config.basePath, router);
 
-    features.configure(meta4)
+	// configure meta4 Features
+    var meta4 = { app: app, router: router, io: io, config: config }
+	features.configure(meta4)
 
-    // start HTTP server
+	// start HTTP server
     httpd.listen(config.port, function() {
         // we're good to go ...
         console.log("[meta4] ----------------------------------------")

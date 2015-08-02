@@ -66,7 +66,7 @@ self.feature = function(meta4, feature) {
 			    if ( crud.id == collection ) {
 			        crud.home = crud.home || feature.data
 
-					// convert to a CRUD operation
+					// convert HTTP method to a CRUD command
 					var action = HTTP_TO_CRUD[req.method]
 					var cmd = { action: action, meta: req.query, data: _.extend({}, req.body) }
 

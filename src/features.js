@@ -76,6 +76,11 @@ self.defaults = function(config) {
         home: config.home+"/public"
     }, features.assets)
 
+    // configure Pages
+    features.pages = _.extend({
+        path: "/page",
+        home: config.home+"/templates/server"
+    }, features.pages)
 
     // configure Logins
     features.auth = _.extend({
@@ -104,10 +109,11 @@ self.configure = function(meta4) {
     // Load and configure Feature
 
     // ensure feature's have both a package & a path
+
     _.each(features, function(options, key) {
         options.path = options.path || "/"+key
-        options.requires = options.requires || options.package || './feature/'+key
         options.package = options.package || key
+        options.requires = options.requires || './feature/'+options.package
         if (options.home) helpers.files.mkdirs(options.home)
     });
 
@@ -128,8 +134,8 @@ self._configureFeature = function(meta4, options) {
 
 	var pkg = options.requires || options.package
 
-    var fn   = self.__features[options.package] || require( pkg );
     console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
+    var fn   = self.__features[options.package] || require( pkg );
 
     if (fn.feature) {
         fn.install && fn.install(options, meta4.config)

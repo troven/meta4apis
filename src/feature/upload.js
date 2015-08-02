@@ -25,11 +25,11 @@ exports.feature = function(meta4, feature) {
     assert(meta4.config, "feature needs meta4.config")
 	var router = meta4.router, config = meta4.config
 
-    // meta4ure Upload
+    // Upload options
     feature = _.defaults(feature, {
-        path: "/upload",
+        path: "upload",
         home: "uploads",
-        can: { download: true },
+        can: { download: true, upload: true },
         limits: {
             fieldNameSize: 100,
             files: 2,
@@ -37,16 +37,16 @@ exports.feature = function(meta4, feature) {
         }
     })
 
-    assert(feature.path, "{{upload}} feature not meta4ured")
-
     // =============================================================================
-    // meta4ure multi-part file upload
 
-    router.post(feature.path, exports.uploader(feature));
     if (feature.can.download) {
-        router.get(feature.path+"/*", exports.downloader(feature));
+		router.get(feature.path+"/*", exports.downloader(feature));
     }
 
+	// multi-part file upload
+    if (feature.can.upload) {
+		router.post(feature.path, exports.uploader(feature));
+	}
 }
 
 exports.uploader = function(feature) {
@@ -77,8 +77,8 @@ console.log("Rename using", req.query, renamed)
             },
 
             onFileUploadStart: function (file, req, res) {
-                console.log("Uploading:", file.originalname, req.body)
-                helper.files.mkdirs(path.basename(file))
+                console.log("Uploading:", file.originalname, path.dirname(file.path))
+                helper.files.mkdirs(path.dirname(file.path))
             },
 
             onFileUploadComplete: function (file, req, res) {
@@ -120,7 +120,6 @@ console.log("[meta4] Upload Complete:", req.query, req.body)
 exports.downloader = function(feature) {
 
     var uploadDir = feature.home
-    helper.files.mkdirs(uploadDir)
     console.log("[meta4] Download attached: ", uploadDir, "@", feature.path+"/*")
 
     return function(req, res, next) {
