@@ -60,6 +60,7 @@ exports.feature = function(meta4, feature) {
 		}
 	)
 	passport.use(strategy);
+
 	passport.serializeUser(function(user, done) {
 		console.log("serializeUser:", user)
 		done(null, user);
@@ -138,7 +139,36 @@ exports.feature = function(meta4, feature) {
 	    failureFlash: failureFlash
     }));
 
-	/* Handle Protection */
+	/* Resource Protection Closures */
+
+	function EnsureAuthenticated(req, res, next) {
+		if (req.isAuthenticated()) next && next();
+		else res.redirect(redirectOptions.failureRedirect);
+		return req.isAuthenticated();
+	}
+
+	function EnsureAuthorized(options, req, res, next) {
+		if (options && options.roles) {
+
+			if (!req.user.roles) {
+				// no user roles - denied
+				res.redirect(redirectOptions.failureRedirect)
+				return false
+			}
+
+			var rolesAllowed = CompareRoles(options.roles, req.user.roles)
+			console.log("auth roles", rolesAllowed, options.roles, req.user.roles)
+
+			if ( !rolesAllowed ) {
+				// no valid roles - denied
+				res.redirect(redirectOptions.successRedirect)
+				return false
+			}
+			// protected by roles - allowed
+		}
+		next && next()
+		return true
+	}
 
 	var CompareRoles = function(a,b) {
 		for(v in a) {
@@ -147,34 +177,18 @@ exports.feature = function(meta4, feature) {
 		return false;
 	}
 
+	/*  Protect Resources */
 	_.each(feature.protected, function(options, key) {
-		var options = options===true?{ path: key, roles: ['user']}:_.extend({ path: key, roles: ['guest']}, options)
+		var options = options===true?{ path: key, roles: ['user']}:_.extend({ path: key, roles: []}, options)
 
 		console.log("Protect", options.path, options)
 
 		router.get(options.path, function(req,res,next) {
 			console.log("Protected", req.path, req.user)
 
-			if (!req.isAuthenticated()) {
-				res.redirect(basePath+paths.login)
-				return
-			}
-			if (options.roles) {
-				if (!req.user.roles) {
-					res.redirect(basePath+paths.login)
-					return
-				}
+			// check if Authenticated and Authorized
+			EnsureAuthenticated(req, res, false) && EnsureAuthorized(options, req, res, next)
 
-				var rolesAllowed = CompareRoles(options.roles, req.user.roles)
-
-				console.log("auth roles", rolesAllowed, options.roles, req.user.roles)
-				if ( rolesAllowed ) {
-					next()
-					return
-				}
-			}
-			console.log("denied", req.path, req.user)
-			res.redirect(basePath+paths.home)
 		})
 	})
 

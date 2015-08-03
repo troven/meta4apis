@@ -42,6 +42,7 @@ exports.feature = function(meta4, feature) {
 
 	// =============================================================================
 
+	//https://github.com/ericf/express-handlebars
 	app.engine('.html', hbs({defaultLayout: false, extname: '.html'}));
 
 	app.set('view engine', '.html');
