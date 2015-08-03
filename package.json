@@ -2,7 +2,11 @@
   "name": "meta4node",
   "version": "0.7.45",
   "description": "A server for executable 'meta4' wire-frames",
-  "main": "src/index",
+  "scripts": {
+    "start": "node src/index.js",
+    "install": "node src/install.js"
+  },
+  "main": "./src/index.js",
   "keywords": [
     "meta4",
     "backbone",
@@ -46,6 +50,7 @@
     "multer": "~0.1.8",
     "mustache-express": "~1.2.1",
     "optimist": "0.2.x",
+    "orientjs": "^2.0.0",
     "passport": "~0.2.2",
     "passport-facebook": "^2.0.0",
     "passport-google": "^0.3.0",

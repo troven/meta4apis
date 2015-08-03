@@ -37,7 +37,7 @@ exports.feature = function(meta4, feature) {
         }
     })
 
-    // =============================================================================
+	// Permissions
 
     if (feature.can.download) {
 		router.get(feature.path+"/*", exports.downloader(feature));
@@ -48,6 +48,9 @@ exports.feature = function(meta4, feature) {
 		router.post(feature.path, exports.uploader(feature));
 	}
 }
+
+// =============================================================================
+// Handle Uploads
 
 exports.uploader = function(feature) {
 

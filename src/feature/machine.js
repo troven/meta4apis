@@ -20,13 +20,18 @@ self.install = function(feature, config) {
 	_.each(feature.config, function(options, name) {
 		// TODO: install node modules directly by name
 	})
+
+	return feature
 }
 
 // =============================================================================
 
+
+// Configure the feature
+
 self.feature = function(meta4, feature) {
 
-    assert(feature, "feature needs meta4")
+	assert(feature, "feature needs meta4")
 	var router = meta4.router, config = meta4.config
 
 	// =============================================================================

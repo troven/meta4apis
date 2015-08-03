@@ -57,7 +57,7 @@ self.feature = function(meta4, feature) {
 			        return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
 			    }
 
-				// handle path args
+				// assign a model ID
 			    if (id && req.body.json) {
 			        req.body.json[crud.idAttribute || ID_ATTRIBUTE] = id
 			    }

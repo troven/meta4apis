@@ -134,11 +134,21 @@ self._configureFeature = function(meta4, options) {
 
 	var pkg = options.requires || options.package
 
+    // static cache features
     console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
     var fn   = self.__features[options.package] || require( pkg );
 
     if (fn.feature) {
-        fn.install && fn.install(options, meta4.config)
+
+	    // install feature & cache result as static options
+	    // i.e. pre-load expensive resources
+        if (fn.install && !fn.options) {
+	        fn.options = _.extend({}, options, fn.install(options, meta4.config))
+	        console.log("Feature Installed: ", options.package, fn.options)
+        }
+
+	    // configure feature ...
+	    // i.e. attach routers / request handlers
         try {
             fn.feature(meta4, options)
         } catch(e) {

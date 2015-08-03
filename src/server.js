@@ -113,6 +113,7 @@ self.start = function(config) {
 
     // configure paths & directories
     config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
+	config.url = config.url || config.host+":"+config.port+config.basePath
 
     // environmentally friendly
     process.title = config.name + " on port "+config.port
@@ -162,7 +163,7 @@ self.start = function(config) {
         console.log("[meta4] ----------------------------------------")
         console.log("[meta4] NodeJS  :", process.version, "("+process.platform+")")
         console.log("[meta4] module  :", config.name, "v"+config.version || "0.0.0")
-        console.log('[meta4] login ->: http://' + config.host+":"+config.port+config.basePath, "\n");
+        console.log('[meta4] login ->: http://' + config.url, "\n");
     });
 
 	// TODO: fix client-side bug

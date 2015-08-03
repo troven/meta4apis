@@ -53,8 +53,11 @@ exports.feature = function(meta4, feature) {
 
 	var strategy = new LocalStrategy(
 		function(username, password, done) {
+
+			// TODO: lookup in database
 			var name = username.match(/^[A-Za-z0-9\s]+/);
-			var user = { id: username, name: name[0], roles: [ 'user' ] }
+			var user = { username: username, name: name[0], roles: [ 'user' ] }
+
 			console.log("[meta4] local login:", user)
 			return done(null, user);
 		}
@@ -72,73 +75,6 @@ exports.feature = function(meta4, feature) {
 	});
 
 	// =============================================================================
-    // authentication routes
-
-	var basePath = config.basePath
-	var failureFlash = false
-	var redirectOptions = {
-		successRedirect: basePath+paths.home,
-		failureRedirect: basePath+paths.login,
-		failureFlash: failureFlash
-	}
-
-
-	console.log("login paths:", basePath, paths)
-
-	/* GET login page. */
-	router.get(paths.login, function(req, res) {
-		console.log("login:", req.path, req.params)
-		if (!req.isAuthenticated()) {
-			res.render('auth/login');
-		} else {
-			res.redirect(redirectOptions.successRedirect);
-		}
-	});
-
-	// LOGIN / LOGOUT
-
-	/* GET login page. */
-	router.get(paths.home, function(req, res, next) {
-		console.log("home:", req.user)
-		if (!req.isAuthenticated()) {
-			res.redirect(redirectOptions.failureRedirect);
-		} else next()
-	});
-
-    /* Handle Login POST */
-    router.post(paths.login, passport.authenticate('local'), function(req, res) {
-	    console.log("authenticated:", req.user)
-	    res.redirect(basePath+paths.home);
-    });
-
-	/* Handle Logout GET */
-	router.get(paths.logout, function(req, res) {
-		console.log("Logout", req.user)
-		req.logout();
-		res.redirect(redirectOptions.successRedirect);
-	});
-
-	// SIGN-UP / FORGOT
-
-    /* GET Registration Page */
-    router.get(paths.signup, function(req, res) {
-        res.render('auth/signup',{message: req.flash('message')});
-    });
-
-    /* Handle Registration POST */
-    router.post(paths.signup, passport.authenticate('signup', {
-        successRedirect: basePath+paths.home,
-        failureRedirect: basePath+paths.signup,
-        failureFlash : failureFlash
-    }));
-
-    /* Handle Forgot POST */
-    router.post(paths.forgot, passport.authenticate('local', {
-        successRedirect: basePath+paths.index,
-        failureRedirect: basePath+paths.forgot,
-	    failureFlash: failureFlash
-    }));
-
 	/* Resource Protection Closures */
 
 	function EnsureAuthenticated(req, res, next) {
@@ -177,15 +113,88 @@ exports.feature = function(meta4, feature) {
 		return false;
 	}
 
-	/*  Protect Resources */
+	// =============================================================================
+    // AUTHORISATION ROUTES
+
+	var basePath = config.basePath
+	var failureFlash = false
+	var redirectOptions = {
+		successRedirect: basePath+paths.home,
+		failureRedirect: basePath+paths.login,
+		failureFlash: failureFlash
+	}
+
+	console.log("login paths:", basePath, paths)
+
+	// USER HOME PAGE
+
+	/* Handle home GET - if logged-in */
+	router.get(paths.home, function(req, res, next) {
+		console.log("home:", req.user)
+		EnsureAuthenticated(req, res, next);
+	});
+
+	// LOGIN / LOGOUT
+
+	/* Handle login GET */
+	router.get(paths.login, function(req, res) {
+console.log("login:", req.path, req.params)
+		if (!req.isAuthenticated()) {
+			res.render('auth/login');
+		} else {
+			res.redirect(redirectOptions.successRedirect);
+		}
+	});
+
+    /* Handle Login POST */
+    router.post(paths.login, passport.authenticate('local'), function(req, res) {
+console.log("authenticated:", req.user)
+	    res.redirect(basePath+paths.home);
+    });
+
+	/* Handle Logout GET */
+	router.get(paths.logout, function(req, res) {
+console.log("Logout", req.user)
+		req.logout();
+		res.redirect(redirectOptions.failureRedirect);
+	});
+
+	// SIGN-UP / FORGOT
+
+    /* Handle Registration GET */
+    router.get(paths.signup, function(req, res) {
+        res.render('auth/signup',{message: req.flash('message')});
+    });
+
+    /* Handle Registration POST */
+    router.post(paths.signup, passport.authenticate('signup', {
+        successRedirect: basePath+paths.home,
+        failureRedirect: basePath+paths.signup,
+        failureFlash : failureFlash
+    }));
+
+    /* Handle Forgot POST */
+    router.post(paths.forgot, passport.authenticate('local', {
+        successRedirect: basePath+paths.index,
+        failureRedirect: basePath+paths.forgot,
+	    failureFlash: failureFlash
+    }));
+
+
+	// =============================================================================
+	// PROTECTED ROUTES
+
+	/*  authenticate and/or authorize protected resources */
+
 	_.each(feature.protected, function(options, key) {
+
+		// a protected resource defaults to a 'user' role
 		var options = options===true?{ path: key, roles: ['user']}:_.extend({ path: key, roles: []}, options)
 
-		console.log("Protect", options.path, options)
+// console.log("Protecting", options.path, options)
 
 		router.get(options.path, function(req,res,next) {
-			console.log("Protected", req.path, req.user)
-
+console.log("Protected", req.path, req.user?req.user:"GUEST")
 			// check if Authenticated and Authorized
 			EnsureAuthenticated(req, res, false) && EnsureAuthorized(options, req, res, next)
 
