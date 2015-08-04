@@ -27,7 +27,7 @@ self.feature = function(meta4, feature) {
     assert(feature, "{{crud}} feature not configured")
 
 	var router = meta4.router, config = meta4.config
-
+	self.options = feature
     // =============================================================================
     // dynamically route model / CRUD requests
 
@@ -57,8 +57,16 @@ self.feature = function(meta4, feature) {
 			        return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
 			    }
 
-				// assign a model ID
-			    if (id && req.body.json) {
+	            // convert HTTP method to a CRUD command
+	            var action = HTTP_TO_CRUD[req.method]
+	            var cmd = { action: action, meta: _.extend({},req.query), data: _.extend({}, req.body) }
+
+	            // if 'id' matches a named query ... execute it
+	            if (id && crud.queries && crud.queries[id]) {
+		            cmd.action = "query"
+		            cmd.query = crud.queries[id]
+	            } else if (id && req.body.json) {
+		            // assign a model ID
 			        req.body.json[crud.idAttribute || ID_ATTRIBUTE] = id
 			    }
 
@@ -66,11 +74,7 @@ self.feature = function(meta4, feature) {
 			    if ( crud.id == collection ) {
 			        crud.home = crud.home || feature.data
 
-					// convert HTTP method to a CRUD command
-					var action = HTTP_TO_CRUD[req.method]
-					var cmd = { action: action, meta: req.query, data: _.extend({}, req.body) }
-
-					// resolve CRUD & return result to browser
+					// execute CMD and return result to browser
 	                return self.execute( cmd, crud, function(result) {
 		                result["@id"] = req.baseUrl
 					    res.json(result)
@@ -83,23 +87,70 @@ self.feature = function(meta4, feature) {
     });
 }
 
+// execute CMD and return result to browser
+//return self.execute( cmd, crud, function(result) {
+//	result["@id"] = req.baseUrl
+//	res.json(result)
+//} )
+
+
 // =============================================================================
+// Redirect CMD to CRUD Adapter
 
-self.executeXXX = function(cmd, crud, cb) {
+self.crud = function(collection, meta, model, done) {
+	// path to the meta-data definition
+	var file = self.options.home+"/"+collection+".json"
+
+	// load collection's meta-data
+	fs.readFile(file, function(error, data) {
+		if (!error) {
+			var crud = JSON.parse(data)
+
+			// default CRUD meta-data
+			_.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} } )
+
+			if (!crud.isServer && !crud.isRemote) {
+				return done && done( { status: "failed", message: "model ["+collection+"] is client-only" });
+			}
+
+			// convert HTTP method to a CRUD command
+			var action = HTTP_TO_CRUD[req.method]
+			var cmd = { action: action, meta: meta, data: model }
+
+			// assign a model ID
+			if (id && crud.queries && crud.queries[id]) {
+				cmd.action = "query"
+				cmd.query = crud.queries[id]
+			} else if (id && model) {
+				model[crud.idAttribute || ID_ATTRIBUTE] = id
+			}
+
+			// make sure request matches the definition
+			if ( crud.id == collection ) {
+				crud.home = crud.home || this.options.data
+				return done && done(cmd, crud)
+			}
+		}
+
+		return done && done( { status: "failed", message: "Missing model: "+collection, errors: [ file ] });
+	})
 }
-
 
 // =============================================================================
 // Redirect CMD to CRUD Adapter
 
 self.execute = function(cmd, crud, cb) {
 
-    _.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} } )
+	assert(cmd, "{{crud}} missing cmd")
+	assert(cmd.action, "{{crud}} missing cmd action")
+	assert(crud, "{{crud}} execute not configured")
+
+    _.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: { type: DEFAULT_ADAPTER }, schema: {}, defaults: {} } )
 
     // acquire the adapter
 	var action  = cmd.action
-    var store   = crud.store || crud.adapter.type || DEFAULT_ADAPTER
-    var adapter = require("./crud/"+store)
+    var store   = crud.store || crud.adapter.type
+    var adapter = require("./crud/adapter/"+store)
 
 	// send error
     if (!adapter) return cb && cb( { status: "failed", message: "missing adapter: "+store });
@@ -111,7 +162,7 @@ self.execute = function(cmd, crud, cb) {
 	}
 
     // delegate to the adapter && send JSON result to client
-    return fn(cmd, crud, cb)
+    return fn(crud, cmd, cb)
 
 }
 

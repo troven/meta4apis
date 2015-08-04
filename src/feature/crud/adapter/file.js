@@ -7,7 +7,7 @@ var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 
-var upload     = require('../upload');       // upload
+var upload     = require('../../upload');       // upload
 
 // =============================================================================
 // handle model requests

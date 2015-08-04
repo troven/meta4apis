@@ -1,4 +1,4 @@
-var self = module.exports = {}
+var self = module.exports
 
 // =============================================================================
 // framework packages
@@ -14,10 +14,23 @@ var helpers     = require('meta4helpers');      // utilities
 
 // =============================================================================
 
-self.__features = {}
+var DEBUG       = true;
+self.__features = {};
 
 self.register = function(key, feature) {
-	exports.__features[key] = feature
+	if (!key || !feature) throw new Error("Feature can't be registered: "+key);
+	if (self.__features[key]) throw new Error("Feature already registered: "+key);
+	self.__features[key] = feature
+	DEBUG && console.log("[meta4] feature: ", key)
+	return feature
+}
+
+self.get = function(id) {
+	return self.__features[id]
+}
+
+self.all = function() {
+	return _.extend({}, self.__features)
 }
 
 self.install = function(config) {
@@ -111,8 +124,9 @@ self.configure = function(meta4) {
     // ensure feature's have both a package & a path
 
     _.each(features, function(options, key) {
-        options.path = options.path || "/"+key
-        options.package = options.package || key
+	    options.id = options.id || key
+        options.path = options.path || "/"+options.id
+        options.package = options.package || options.id
         options.requires = options.requires || './feature/'+options.package
         if (options.home) helpers.files.mkdirs(options.home)
     });
@@ -123,7 +137,8 @@ self.configure = function(meta4) {
 
     // naively prioritize routes based - shortest paths first
     _.each(sorted, function(options) {
-		self._configureFeature(meta4, options)
+		var feature = self._configureFeature(meta4, options)
+	    feature && self.register(options.id, feature)
     })
 
     return
@@ -150,11 +165,15 @@ self._configureFeature = function(meta4, options) {
 	    // configure feature ...
 	    // i.e. attach routers / request handlers
         try {
-            fn.feature(meta4, options)
+            var public_fn = fn.feature(meta4, options) || fn
+	        return public_fn;
         } catch(e) {
             console.log("Feature Failed", options.package, e)
         }
-    } else throw "not a meta4 feature: "+options.requires
+    } else {
+	    console.log("not a meta4 feature: ", options.requires)
+    }
+	return false
 }
 
 self.teardown = function(options) {

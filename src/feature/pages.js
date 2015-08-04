@@ -13,13 +13,13 @@ var paths      = require('path');           // file path
 // meta4 packages
 
 var helper     = require('meta4helpers');   // files & mixins
+var features   = require('../features');
 
 // =============================================================================
 
 // Feature packages
 
 var hbs = require('express-handlebars');
-
 
 // =============================================================================
 // configure the API routes
@@ -52,11 +52,18 @@ exports.feature = function(meta4, feature) {
 
 	// Dynamic Branded Views
 
-	router.get(feature.path+"/:id", function(req, res, next) {
+	router.get(feature.path+"/:type/:id?", function(req, res, next) {
+		var page = req.params.type
 		var id = req.params.id
-		var model = { user: req.user, brand: brand, page: { path: brand.path+id, id: id } }
+
+		if (id) {
+			var CRUD = features.get('crud');
+			DEBUG&&console.log("[meta4] Features: ", CRUD )
+		}
+
+		var model = { user: req.user, brand: brand, page: { path: brand.path+id, id: page } }
 //		console.log("Brand Page", req.isAuthenticated(), id, model)
-		res.render(id, model)
+		res.render(page, model)
 	});
 
 	DEBUG&&console.log("[meta4] Pages: "+feature.path+" @ ",templateHome)

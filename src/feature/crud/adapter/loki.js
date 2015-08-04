@@ -65,7 +65,7 @@ exports._getCollection = function(crud, db, cb) {
 // =============================================================================
 // Create
 
-exports.create = function(query, crud, cb) {
+exports.create = function(crud, cmd, cb) {
 
 	exports.getCollection(crud, function(err, collection) {
 		if (err) {
@@ -73,16 +73,16 @@ exports.create = function(query, crud, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] create:",crud.id, query.data)
+		DEBUG && console.log("[loki] create:",crud.id, cmd.data)
 
-		var found = collection.insert(query.data)
+		var found = collection.insert(cmd.data)
 
 		// externalize ID attribute
-		query.data[crud.idAttribute] = query.data["$loki"]
+		cmd.data[crud.idAttribute] = cmd.data["$loki"]
 		DEBUG && console.log("[loki] created:",crud.id, found)
 
 		// we're done
-		cb && cb({ status: "success", data: query.data, meta: { schema: crud.schema } })
+		cb && cb({ status: "success", data: cmd.data, meta: { schema: crud.schema } })
 
 	})
 
@@ -91,7 +91,7 @@ exports.create = function(query, crud, cb) {
 // =============================================================================
 // Read / GET
 
-exports.read = function(query, crud, cb) {
+exports.read = function(crud, cmd, cb) {
 
 	exports.getCollection(crud, function(err, collection) {
 
@@ -100,20 +100,20 @@ exports.read = function(query, crud, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] read:",crud.id, query.meta )
+		DEBUG && console.log("[loki] read:",crud.id, cmd.meta )
 
-		var found = collection.find(query.meta)
+		var found = collection.find(cmd.meta)
 		DEBUG && console.log("[loki] found:", crud.id, found)
 
 		// we're done
-		cb && cb( { status: "success", data: found, meta: { filter: query.meta, schema: crud.schema, count: found.length } });
+		cb && cb( { status: "success", data: found, meta: { filter: cmd.meta, schema: crud.schema, count: found.length } });
 	})
 }
 
 // =============================================================================
 // Update / PUT
 
-exports.update = function(query, crud, cb) {
+exports.update = function(crud, cmd, cb) {
 
 	exports.getCollection(crud, function(err, collection) {
 
@@ -122,13 +122,13 @@ exports.update = function(query, crud, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] update:", crud.id, query.data)
+		DEBUG && console.log("[loki] update:", crud.id, cmd.data)
 
-		var found = collection.update(query.data)
-		DEBUG && console.log("[loki] updated:", crud.id, query.data, found)
+		var found = collection.update(cmd.data)
+		DEBUG && console.log("[loki] updated:", crud.id, cmd.data, found)
 
 		// we're done
-		cb && cb( { status: "success", data: query.data, meta: { schema: crud.schema } });
+		cb && cb( { status: "success", data: cmd.data, meta: { schema: crud.schema } });
 	})
 
 }
@@ -136,7 +136,7 @@ exports.update = function(query, crud, cb) {
 // =============================================================================
 // Delete / DELETE
 
-exports.delete = function(query, crud, cb) {
+exports.delete = function(crud, cmd, cb) {
 
 	exports.getCollection(crud, function(err, collection) {
 
@@ -145,9 +145,9 @@ exports.delete = function(query, crud, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] delete:", crud.id, query.data)
+		DEBUG && console.log("[loki] delete:", crud.id, cmd.data)
 
-		var found = collection.removeWhere(query.data)
+		var found = collection.removeWhere(cmd.data)
 		DEBUG && console.log("[loki] deleted:",crud.id, found)
 
 		// we're done
