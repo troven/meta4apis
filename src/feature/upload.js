@@ -20,9 +20,15 @@ var crud       = require('./crud');           // CRUD
 
 exports.feature = function(meta4, feature) {
 
+	// Sanity Checks
+	assert(meta4,       "feature missing {{meta4}}")
+	assert(meta4.router,"feature missing {{meta4.router}}")
+	assert(meta4.config,"feature missing {{meta4.config}}")
+	assert(meta4.vents, "feature missing {{meta4.vents}}")
+
     assert(feature, "feature-missing")
-    assert(meta4.router, "feature needs meta4.router")
-    assert(meta4.config, "feature needs meta4.config")
+
+// =============================================================================
 	var router = meta4.router, config = meta4.config
 
     // Upload options
@@ -40,19 +46,19 @@ exports.feature = function(meta4, feature) {
 	// Permissions
 
     if (feature.can.download) {
-		router.get(feature.path+"/*", exports.downloader(feature));
+		router.get(feature.path+"/*", exports.downloader(feature, meta4));
     }
 
 	// multi-part file upload
     if (feature.can.upload) {
-		router.post(feature.path, exports.uploader(feature));
+		router.post(feature.path, exports.uploader(feature, meta4));
 	}
 }
 
 // =============================================================================
 // Handle Uploads
 
-exports.uploader = function(feature) {
+exports.uploader = function(feature, meta4) {
 
     var uploadDir = feature.home
     helper.files.mkdirs(uploadDir)
@@ -98,12 +104,19 @@ console.log("[meta4] Uploaded:", feature.path, file, req.query)
 
                 if (req.query.collection) {
                     console.log("Upload Saving", req.query)
+
+	                //BUG: refactored CRUD
                     crud.execute( { action: "create", data: file }, { id: req.query.collection, home: feature.home }, function(result) {
                         console.log("Upload Saved", result)
                     })
+
     //	            //TODO: store 'file' meta-data in a data store
     //	            fs.writeFile(file.path+".json", JSON.stringify(file))
                 }
+
+	            // vent our intentions
+	            meta4.vents.emit(feature.id, 'upload', file, req.user);
+	            meta4.vents.emit(feature.id+':upload', file, req.user);
 
                 helper.files.mkdirs(path.basename(file))
                 res.json( { data: _.pick(file, 'name', 'url', 'label', "size", "mimetype"), status: 'success' } )
@@ -120,7 +133,7 @@ console.log("[meta4] Upload Complete:", req.query, req.body)
 
 }
 
-exports.downloader = function(feature) {
+exports.downloader = function(feature, meta4) {
 
     var uploadDir = feature.home
     console.log("[meta4] Download attached: ", uploadDir, "@", feature.path+"/*")
@@ -128,6 +141,11 @@ exports.downloader = function(feature) {
     return function(req, res, next) {
         var filename = path.resolve(uploadDir+req.path.substring(feature.path.length))
 console.log("[meta4] Download:", filename)
+
+	    // vent our intentions
+	    meta4.vents.emit(feature.id, 'download', filename, req.user);
+	    meta4.vents.emit(feature.id+':download', filename, req.user);
+
         res.sendFile(filename)
     }
 }

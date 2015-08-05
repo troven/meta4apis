@@ -1,4 +1,4 @@
-var exports = module.exports = module.exports || {};
+var self = module.exports
 
 // =============================================================================
 // framework packages
@@ -11,7 +11,9 @@ var assert          = require('assert');         // assertions
 // =============================================================================
 // meta4 packages
 
-// Strategies
+// =============================================================================
+
+// Passport Authentication Strategies
 
 var LinkedInStrategy = require('passport-linkedin'),
 	GoogleStrategy = require('passport-google'),
@@ -19,18 +21,22 @@ var LinkedInStrategy = require('passport-linkedin'),
 
 // =============================================================================
 
-exports.feature = function(meta4, feature) {
+self.feature = function(meta4, feature) {
 
-	assert(meta4, "feature needs meta4")
-	assert(meta4.router, "feature needs meta4.router")
-    assert(feature.path, "{{auth}} feature not configured")
+	// Sanity Checks
+	assert(meta4,       "feature missing {{meta4}}")
+	assert(meta4.router,"feature missing {{meta4.router}}")
+	assert(meta4.config,"feature missing {{meta4.config}}")
+	assert(meta4.vents, "feature missing {{meta4.vents}}")
 
-	assert(meta4.config, "meta4 not configured")
-	assert(meta4.config.basePath, "meta4.basePath not configured")
+	assert(meta4.config.basePath, "feature missing {{meta4.basePath}}")
+
+	assert(feature.path, "feature missing {{feature.path}}")
+	assert(feature.crud, "feature missing {{feature.crud}}")
 
 	// =============================================================================
 
-	var app = meta4.app, router = meta4.router, config = meta4.config
+	var router = meta4.router, config = meta4.config
 
 	var paths = _.defaults(feature.paths, {
 		home: "/pages/home",
@@ -42,26 +48,42 @@ exports.feature = function(meta4, feature) {
 
 	var DEBUG = feature.debug || true
 
+	if (self._isInstalled) {
+		console.log("Skip re-init AUTH")
+		return
+	}
+	self._isInstalled = true
+
 	// =============================================================================
 	// Manage session with Passport
 
 	router.use(passport.initialize());
 	router.use(passport.session());
 
+	// CRUD-based Authentication
 
-	// Authentication Strategies
+	var crudFactory    = require("./crud")
+	crudFactory.feature(meta4, feature.crud)
+
+	var crud = crudFactory.models["meta4users"]
+	if (!crud) throw new Error("Auth missing [meta4users] model")
+	var Users = crudFactory.CRUD(crud);
 
 	var strategy = new LocalStrategy(
 		function(username, password, done) {
 
-			// TODO: lookup in database
-			var name = username.match(/^[A-Za-z0-9\s]+/);
-			var user = { username: username, name: name[0], roles: [ 'user' ] }
+			// Identify & retrieve user
+			var user = { username: username, password: password }
 
-			console.log("[meta4] local login:", user)
-			return done(null, user);
+			Users.find(user, function(found) {
+				if (!found.data || !found.data.roles) {
+					return done("not authenticated: "+username);
+				}
+				return done(null, found.data);
+			})
 		}
 	)
+
 	passport.use(strategy);
 
 	passport.serializeUser(function(user, done) {
@@ -130,7 +152,6 @@ exports.feature = function(meta4, feature) {
 
 	/* Handle home GET - if logged-in */
 	router.get(paths.home, function(req, res, next) {
-		console.log("home:", req.user)
 		EnsureAuthenticated(req, res, next);
 	});
 
@@ -138,7 +159,7 @@ exports.feature = function(meta4, feature) {
 
 	/* Handle login GET */
 	router.get(paths.login, function(req, res) {
-console.log("login:", req.path, req.params)
+
 		if (!req.isAuthenticated()) {
 			res.render('auth/login');
 		} else {
@@ -148,13 +169,21 @@ console.log("login:", req.path, req.params)
 
     /* Handle Login POST */
     router.post(paths.login, passport.authenticate('local'), function(req, res) {
-console.log("authenticated:", req.user)
+
+	    // vent our intentions
+	    meta4.vents.emit(feature.id, "login", req.user);
+	    meta4.vents.emit(feature.id+":login", req.user);
+
 	    res.redirect(basePath+paths.home);
     });
 
 	/* Handle Logout GET */
 	router.get(paths.logout, function(req, res) {
-console.log("Logout", req.user)
+
+		// vent our intentions
+		meta4.vents.emit(feature.id, "logout", req.user);
+		meta4.vents.emit(feature.id+":logout", req.user);
+
 		req.logout();
 		res.redirect(redirectOptions.failureRedirect);
 	});
@@ -194,7 +223,7 @@ console.log("Logout", req.user)
 // console.log("Protecting", options.path, options)
 
 		router.get(options.path, function(req,res,next) {
-console.log("Protected", req.path, req.user?req.user:"GUEST")
+//console.log("Protected", req.path, req.user?req.user:"GUEST")
 			// check if Authenticated and Authorized
 			EnsureAuthenticated(req, res, false) && EnsureAuthorized(options, req, res, next)
 

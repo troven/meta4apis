@@ -1,4 +1,3 @@
-var self = module.exports
 
 // =============================================================================
 // framework packages
@@ -13,15 +12,18 @@ var paths      = require('path');           // file path helper
 var helpers     = require('meta4helpers');      // utilities
 
 // =============================================================================
+// Event-based API
+
+var self = module.exports
+
+// =============================================================================
 
 var DEBUG       = true;
 self.__features = {};
 
 self.register = function(key, feature) {
 	if (!key || !feature) throw new Error("Feature can't be registered: "+key);
-	if (self.__features[key]) throw new Error("Feature already registered: "+key);
 	self.__features[key] = feature
-	DEBUG && console.log("[meta4] feature: ", key)
 	return feature
 }
 
@@ -95,9 +97,24 @@ self.defaults = function(config) {
         home: config.home+"/templates/server"
     }, features.pages)
 
+	// configure Node Machines
+	features.machine = _.extend({
+		"path": "/do",
+		"home": config.home+"/features/machines",
+		"repository": "http://nodemachine.org",
+		"config": {
+			"github": {
+				"repo": "meta4",
+				"owner": "troven"
+			}
+		},
+		roles: [ "user" ]
+	}, features.machine)
+
     // configure Logins
     features.auth = _.extend({
         disabled: true,
+	    crud: features.crud,
         path: "/",
         paths: {
             index:  "/",
@@ -126,6 +143,8 @@ self.configure = function(meta4) {
     _.each(features, function(options, key) {
 	    options.id = options.id || key
         options.path = options.path || "/"+options.id
+	    options.basePath = config.basePath + "/"+options.path
+
         options.package = options.package || options.id
         options.requires = options.requires || './feature/'+options.package
         if (options.home) helpers.files.mkdirs(options.home)
@@ -135,10 +154,11 @@ self.configure = function(meta4) {
     var sorted = _.sortBy( _.values(features) , function(a) { return a.order?a.order:a.path.length })
     console.log("[meta4] features:", _.pluck(sorted, "package"))
 
+	self._configureFeature(meta4, features.auth )
+
     // naively prioritize routes based - shortest paths first
     _.each(sorted, function(options) {
-		var feature = self._configureFeature(meta4, options)
-	    feature && self.register(options.id, feature)
+		self._configureFeature(meta4, options)
     })
 
     return
@@ -166,14 +186,15 @@ self._configureFeature = function(meta4, options) {
 	    // i.e. attach routers / request handlers
         try {
             var public_fn = fn.feature(meta4, options) || fn
-	        return public_fn;
+	        fn._isInstalled = true
+	        self.register(options.id, public_fn)
         } catch(e) {
             console.log("Feature Failed", options.package, e)
+	        throw e
         }
     } else {
-	    console.log("not a meta4 feature: ", options.requires)
+	    console.log("skip feature: ", options.id, "@", pkg)
     }
-	return false
 }
 
 self.teardown = function(options) {

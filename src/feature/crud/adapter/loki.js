@@ -16,7 +16,22 @@ exports._db = {}
 // =============================================================================
 // safely acquire a Collection
 
-exports.getCollection = function(crud, cb) {
+var getCollection = function(crud, db) {
+	// get our collection
+	var collection = db.getCollection( crud.id )
+	if (!collection) {
+		// if not, create it
+		collection = db.addCollection( crud.id )
+		// initial data
+		_.each(crud.data, function(data) {
+			collection.insert(data)
+		})
+	}
+	return collection
+}
+
+
+var acquireDatabase = function(crud, cb) {
 
 	DEBUG && console.log("CRUD:loki", crud.id)
 	assert(crud.home, "CRUD Loki required a home")
@@ -25,64 +40,49 @@ exports.getCollection = function(crud, cb) {
 
 	var db = exports._db[crud.id]
 	if (db) {
-	    // already initialized ..
-	    exports._getCollection( crud, db, cb )
+		// already initialized ..
+		cb && cb(null, db)
 	    return
 	}
 
 	// initialize database
 	var autosaveInterval = crud.adapter.autosaveInterval?crud.adapter.autosaveInterval:3000
-	var filename = crud.home+"/"+crud.id+".db"
-    helper.files.mkdirs(crud.home)
+
+	// file management
+//	crud.adapter.database.name
+	var filename = crud.home+"/"+crud.id+".loki"
+	helper.files.mkdirs(crud.home)
 
     // load Loki - callback when done
     db = exports._db[crud.id] = new loki( filename, { autoload: true, autosave: true, autosaveInterval: autosaveInterval,
         autoloadCallback: function() {
-		    exports._getCollection( crud, db, cb )
+	        cb && acquireDatabase( crud, cb )
         }
      } );
-}
-
-exports._getCollection = function(crud, db, cb) {
-
-	// get our collection
-	var collection = db.getCollection( crud.id )
-	if (!collection) {
-		// if not, create it
-		collection = db.addCollection( crud.id )
-		_.each(crud.data, function(data) {
-			collection.insert(data)
-		})
-	}
-
-	if (cb) {
-		if (!collection)  cb("loki collection not found:"+crud.id, null)
-		else cb(null, collection)
-	}
-	return collection
 }
 
 // =============================================================================
 // Create
 
-exports.create = function(crud, cmd, cb) {
+exports.create = function(crud, data, cb) {
 
-	exports.getCollection(crud, function(err, collection) {
+	acquireDatabase(crud, function(err, db) {
 		if (err) {
 			cb && cb( { status: "failed", message: err })
 			return false
 		}
 
-		DEBUG && console.log("[loki] create:",crud.id, cmd.data)
+		DEBUG && console.log("[loki] create:",crud.id, data)
 
-		var found = collection.insert(cmd.data)
+		var collection = db.getCollection(crud, db)
+		var found = collection.insert(data)
 
 		// externalize ID attribute
-		cmd.data[crud.idAttribute] = cmd.data["$loki"]
+		data[crud.idAttribute] = data["$loki"]
 		DEBUG && console.log("[loki] created:",crud.id, found)
 
 		// we're done
-		cb && cb({ status: "success", data: cmd.data, meta: { schema: crud.schema } })
+		cb && cb({ status: "success", data: data, meta: {  } })
 
 	})
 
@@ -91,44 +91,46 @@ exports.create = function(crud, cmd, cb) {
 // =============================================================================
 // Read / GET
 
-exports.read = function(crud, cmd, cb) {
+exports.read = function(crud, data, cb) {
 
-	exports.getCollection(crud, function(err, collection) {
+	acquireDatabase(crud, function(err, db) {
 
 		if (err) {
 			cb && cb( { status: "failed" , message: err })
 			return false
 		}
 
-		DEBUG && console.log("[loki] read:",crud.id, cmd.meta )
+		DEBUG && console.log("[loki] read:",crud.id, data )
 
-		var found = collection.find(cmd.meta)
+		var collection = db.getCollection(crud, db)
+		var found = collection.find(data)
 		DEBUG && console.log("[loki] found:", crud.id, found)
 
 		// we're done
-		cb && cb( { status: "success", data: found, meta: { filter: cmd.meta, schema: crud.schema, count: found.length } });
+		cb && cb( { status: "success", data: found, meta: { filter: data, count: found.length } });
 	})
 }
 
 // =============================================================================
 // Update / PUT
 
-exports.update = function(crud, cmd, cb) {
+exports.update = function(crud, data, cb) {
 
-	exports.getCollection(crud, function(err, collection) {
+	acquireDatabase(crud, function(err, db) {
 
 		if (err) {
 			cb && cb( { status: "failed", message: err })
 			return false
 		}
 
-		DEBUG && console.log("[loki] update:", crud.id, cmd.data)
+		DEBUG && console.log("[loki] update:", crud.id, data)
 
-		var found = collection.update(cmd.data)
-		DEBUG && console.log("[loki] updated:", crud.id, cmd.data, found)
+		var collection = db.getCollection(crud, db)
+		var found = collection.update(data)
+		DEBUG && console.log("[loki] updated:", crud.id, data, found)
 
 		// we're done
-		cb && cb( { status: "success", data: cmd.data, meta: { schema: crud.schema } });
+		cb && cb( { status: "success", data: data, meta: { count: found } });
 	})
 
 }
@@ -136,22 +138,22 @@ exports.update = function(crud, cmd, cb) {
 // =============================================================================
 // Delete / DELETE
 
-exports.delete = function(crud, cmd, cb) {
+exports.delete = function(crud, data, cb) {
 
-	exports.getCollection(crud, function(err, collection) {
-
+	acquireDatabase(crud, function(err, db) {
 		if (err) {
 			cb && cb( { status: "failed", message: err })
 			return false
 		}
 
-		DEBUG && console.log("[loki] delete:", crud.id, cmd.data)
+		DEBUG && console.log("[loki] delete:", crud.id, data)
 
-		var found = collection.removeWhere(cmd.data)
+		var collection = db.getCollection(crud, db)
+		var found = collection.removeWhere(data)
 		DEBUG && console.log("[loki] deleted:",crud.id, found)
 
 		// we're done
-		cb & cb( { status: "success", data: {}, meta: { schema: crud.schema } });
+		cb & cb( { status: "success", data: data, meta: { count: found } });
 	})
 }
 

@@ -154,7 +154,7 @@ self.start = function(config) {
 	app.use(config.basePath, router);
 
 	// configure meta4 Features
-    var meta4 = { app: app, router: router, io: io, config: config }
+    var meta4 = { app: app, router: router, io: io, config: config, vents: self }
 	features.configure(meta4)
 
 	// start HTTP server

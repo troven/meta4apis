@@ -25,37 +25,40 @@ self.install = function(feature, config) {
 }
 
 // =============================================================================
-
+// Install a node-machine using npm - then call it as a web API
 
 // Configure the feature
 
 self.feature = function(meta4, feature) {
 
-	assert(feature, "feature needs meta4")
-	var router = meta4.router, config = meta4.config
+	// Sanity Checks
+	assert(meta4,       "feature missing {{meta4}}")
+	assert(meta4.router,"feature missing {{meta4.router}}")
+	assert(meta4.config,"feature missing {{meta4.config}}")
+	assert(meta4.vents, "feature missing {{meta4.vents}}")
 
-	// =============================================================================
-
-	// sanity check
 	assert(feature, "{{machine}} feature not configured")
 	assert(feature.path, "{{machine}} path not configured")
 
+	// =============================================================================
+
+	var router = meta4.router, config = meta4.config
+
 	 // dynamically route model / CRUD requests
 	 router.use(feature.path+'/:pack.:machine', function(req, res) {
-	    self.handle(req, res, feature, config)
+	    self.handle(req, res, feature, config, meta4)
 	 } );
 
 	 router.use(feature.path+'/about/:pack.:machine', function(req, res) {
-	    self.handle(req, res, feature, meta4)
+	    self.handle(req, res, feature, config, meta4)
 	 } );
 }
 
-self.handle = function (req, res, feature, meta4) {
-	var router = meta4.router, config = meta4.config
+self.handle = function (req, res, feature, config, meta4) {
 
 	// meta4 options
-	var options = feature.config[req.params.pack]
-	assert(feature.config[req.params.pack], "feature {{pack}} config missing for "+req.params.pack)
+	var options = feature.config[req.params.pack] || {}
+//	assert(feature.config[req.params.pack], "feature {{pack}} config missing for "+req.params.pack)
 
 	// composite meta-data
 	var meta = _.extend({ machinePrefix: "machinepack-"}, options, req.params)
@@ -64,7 +67,7 @@ self.handle = function (req, res, feature, meta4) {
 	var machine = require(meta.machinePrefix+req.params.pack)
 	if (!machine) {
 		// error
-		 return res.json( { id: req.params.pack+"."+req.params.machine, status: 'error', message: 'missing machine-pack'} );
+		return res.json( { id: req.params.pack+"."+req.params.machine, status: 'error', message: 'missing machine-pack'} );
 	}
 
 	// late-bind the query parameters
@@ -74,19 +77,27 @@ self.handle = function (req, res, feature, meta4) {
 	var fn = machine[req.params.machine]
 	if (!fn) {
 		// error
-		 return res.json( { id: req.params.pack+"."+req.params.machine, status: 'error', message: 'missing machine'} );
+		return res.json( { id: req.params.pack+"."+req.params.machine, status: 'error', message: 'missing machine'} );
 	}
 
 	// execute the machine fn() asynchronously
 	var cmd = fn(meta)
-	var spec = _.omit(cmd, ["fn"])
+	meta.id = req.params.pack+"."+req.params.machine
+	meta.friendlyName = cmd.friendlyName
+	meta.description = cmd.description
 
 	var result = cmd.exec({
 		error: function (err) {
-			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'failed', meta: spec, errors: [err]} );
+			feature.debug && console.log("[meta4machine] ", meta, err)
+			return res.json( { id: meta.id, status: 'failed', meta: meta, errors: feature.debug?[err]:err.code} );
 		},
 		success: function (result){
-			  return res.json( { id: req.params.pack+"."+req.params.machine, status: 'success', data: result, meta: spec });
+
+			// vent our intentions
+			meta4.vents.emit(feature.id, meta.id, req.user?req.user:false, meta, result );
+			meta4.vents.emit(feature.id+":"+meta.id, req.user?req.user:false, meta, result );
+
+			return res.json( { id: meta.id, status: 'success', data: result, meta: meta });
 		},
 	 })
 }

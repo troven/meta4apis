@@ -10,12 +10,10 @@ var _          = require('underscore');     // collections helper
 // =============================================================================
 // meta4 packages
 
-//var helper     = require('meta4helpers');   // files & mixins
-
+var helper     = require('meta4helpers');   // files & mixins
 var upload      = require('./upload');        // uploads & attachments
 
-var DEFAULT_ADAPTER = "loki"
-var ID_ATTRIBUTE    = "_id"
+var ID_ATTRIBUTE    = "id"
 var HTTP_TO_CRUD = { "POST": "create", "GET": "read", "PUT": "update", "DELETE": "delete"}
 
 // =============================================================================
@@ -23,147 +21,135 @@ var HTTP_TO_CRUD = { "POST": "create", "GET": "read", "PUT": "update", "DELETE":
 
 self.feature = function(meta4, feature) {
 
-    assert(meta4, "feature needs meta4")
+	// Sanity Checks
+	assert(meta4,       "feature missing {{meta4}}")
+	assert(meta4.router,"feature missing {{meta4.router}}")
+	assert(meta4.config,"feature missing {{meta4.config}}")
+	assert(meta4.vents, "feature missing {{meta4.vents}}")
+
     assert(feature, "{{crud}} feature not configured")
 
-	var router = meta4.router, config = meta4.config
-	self.options = feature
-    // =============================================================================
-    // dynamically route model / CRUD requests
+	// =============================================================================
 
+	var router = meta4.router, config = meta4.config
+
+    // =============================================================================
+
+	// prevent multiple init calls
+	if (self.models) {
+		console.log("Skip re-init CRUD")
+		return
+	}
+	self.models = helper.mvc.reload.models(feature.home, feature)
+	self.options = feature
+
+	// dynamically route model / CRUD requests
 
     router.use(feature.path+'/:collection/_upload_', upload.uploader( feature.upload || meta4.config.features.upload ))
 
     router.use(feature.path+'/:collection/:id?', function(req, res, next) {
 
-		 var collection = req.params.collection
-		 var id = req.params.id
+		var collection = req.params.collection
+		var id = req.params.id
+		var action = HTTP_TO_CRUD[req.method]
 
-		 // ugly hack to prevent match on duplicate routes
-		 if (id == "_upload_" ) return next()
+		// kludge to prevent match on duplicate routes
+		if (id == "_upload_" ) return next()
 
-        // path to the meta-data definition
-        var file = feature.home+"/"+collection+".json"
+	    // resolve CRUD configuration
+	    var crud = self.models[collection]
+	    if (!crud) {
+		    next();
+		    return;
+	    }
 
-        // load collection's meta-data
-        fs.readFile(file, function(error, data) {
-            if (!error) {
-                var crud = JSON.parse(data)
+	    // dynamic query support
+	    if (id && crud.queries[id]) {
+		    action = id
+	    }
 
-			    // default CRUD meta-data
-			    _.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} } )
+	    // Instantiate dynamic CRUD
+	    var CRUD = self.CRUD(crud)
 
-			    if (!crud.isServer && !crud.isRemote) {
-			        return res.json( { status: "failed", message: "model ["+collection+"] is client-only" });
-			    }
+	    // unknown action / unknown query
+	    if (!CRUD[action]) {
+		    res.send(404);
+		    return;
+	    }
 
-	            // convert HTTP method to a CRUD command
-	            var action = HTTP_TO_CRUD[req.method]
-	            var cmd = { action: action, meta: _.extend({},req.query), data: _.extend({}, req.body) }
+	    // hedge our bets
+	    var cmd = _.extend({}, req.query, req.body )
 
-	            // if 'id' matches a named query ... execute it
-	            if (id && crud.queries && crud.queries[id]) {
-		            cmd.action = "query"
-		            cmd.query = crud.queries[id]
-	            } else if (id && req.body.json) {
-		            // assign a model ID
-			        req.body.json[crud.idAttribute || ID_ATTRIBUTE] = id
-			    }
+	    // execute
+		CRUD[action](cmd, function(result) {
 
-			    // make sure request matches the definition
-			    if ( crud.id == collection ) {
-			        crud.home = crud.home || feature.data
+			// vent our intentions
+			meta4.vents.emit(feature.id, action, req.user||false, cmd, result.data||false);
+			meta4.vents.emit(feature.id+":"+action, req.user||false, cmd, result.data||false);
 
-					// execute CMD and return result to browser
-	                return self.execute( cmd, crud, function(result) {
-		                result["@id"] = req.baseUrl
-					    res.json(result)
-	                } )
-                }
-            }
+			// send results
+			result["@src"] = req.baseUrl
+			res.json(result)
+		})
 
-            return res.json( { status: "failed", message: "Missing model: "+collection, errors: [ file ] });
-        })
     });
 }
 
-// execute CMD and return result to browser
-//return self.execute( cmd, crud, function(result) {
-//	result["@id"] = req.baseUrl
-//	res.json(result)
-//} )
-
-
 // =============================================================================
-// Redirect CMD to CRUD Adapter
+// A factory method turn a crud-model definition into an adapter-specific CRUD Object
+// returns a switch-back / closures for create, read, update, delete, exists, finds, query
+// plus injects closures for each named-query
+// each closure has the same signature: fn(model,callback)
 
-self.crud = function(collection, meta, model, done) {
-	// path to the meta-data definition
-	var file = self.options.home+"/"+collection+".json"
+self.CRUD = function(crud) {
 
-	// load collection's meta-data
-	fs.readFile(file, function(error, data) {
-		if (!error) {
-			var crud = JSON.parse(data)
+	// default CRUD meta-data
+	crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} }, crud )
 
-			// default CRUD meta-data
-			_.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} } )
-
-			if (!crud.isServer && !crud.isRemote) {
-				return done && done( { status: "failed", message: "model ["+collection+"] is client-only" });
-			}
-
-			// convert HTTP method to a CRUD command
-			var action = HTTP_TO_CRUD[req.method]
-			var cmd = { action: action, meta: meta, data: model }
-
-			// assign a model ID
-			if (id && crud.queries && crud.queries[id]) {
-				cmd.action = "query"
-				cmd.query = crud.queries[id]
-			} else if (id && model) {
-				model[crud.idAttribute || ID_ATTRIBUTE] = id
-			}
-
-			// make sure request matches the definition
-			if ( crud.id == collection ) {
-				crud.home = crud.home || this.options.data
-				return done && done(cmd, crud)
-			}
-		}
-
-		return done && done( { status: "failed", message: "Missing model: "+collection, errors: [ file ] });
-	})
-}
-
-// =============================================================================
-// Redirect CMD to CRUD Adapter
-
-self.execute = function(cmd, crud, cb) {
-
-	assert(cmd, "{{crud}} missing cmd")
-	assert(cmd.action, "{{crud}} missing cmd action")
-	assert(crud, "{{crud}} execute not configured")
-
-    _.defaults(crud, { idAttribute: ID_ATTRIBUTE, adapter: { type: DEFAULT_ADAPTER }, schema: {}, defaults: {} } )
-
-    // acquire the adapter
-	var action  = cmd.action
-    var store   = crud.store || crud.adapter.type
-    var adapter = require("./crud/adapter/"+store)
-
-	// send error
-    if (!adapter) return cb && cb( { status: "failed", message: "missing adapter: "+store });
-
-	// resolve adapter action fn()
-	var fn = adapter[action]
-	if (!fn) {
-		return cb && cb( { status: "error", message: "unsupported method:"+action } );
+	if (!crud.isServer && !crud.isRemote) {
+		throw new Error( "model ["+collection+"] is client-only" );
 	}
 
-    // delegate to the adapter && send JSON result to client
-    return fn(crud, cmd, cb)
+	// resolve database-specific adapter implementation
+	var adapter = require( crud.requires || "./crud/adapter/"+(crud.store || crud.adapter.type) )
 
+	// send error
+	if (!adapter) throw new Error("[meta4crud] missing adapter: "+requires);
+
+	// Switchback encapsulates a raw Adapter
+	var CRUD = {
+		create: function (model, cb) {
+			return adapter.create ? adapter.create(crud, model, cb) : false;
+		},
+		read  : function (model, cb) {
+			return adapter.read ? adapter.read(crud, model, cb) : false;
+		},
+		update: function (model, cb) {
+			return adapter.update ? adapter.update(crud, model, cb) : false;
+		},
+		delete: function (model, cb) {
+			return adapter.delete ? adapter.delete(crud, model, cb) : false;
+		},
+		find  : function (model, cb) {
+			return adapter.find ? adapter.find(crud, model, cb) : false;
+		},
+		exists: function (model, cb) {
+			return adapter.exists ? (adapter.exists(crud, model, cb) ? true : false) : false;
+		},
+		query : function (queryName, model, cb) {
+			return adapter.query ? adapter.query(crud, queryName, model, cb) : false;
+		}
+	}
+
+	// inject closures for each named-query
+	if (adapter.query && crud.queries) {
+		_.each(crud.queries, function(query, key) {
+			CRUD[key] = function(model, cb) {
+				adapter.query(crud, key, model, cb);
+			}
+		})
+	}
+	return CRUD
 }
 
 self.teardown = function(options) {

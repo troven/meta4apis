@@ -14,6 +14,7 @@ var paths      = require('path');           // file path
 
 var helper     = require('meta4helpers');   // files & mixins
 var features   = require('../features');
+var factory    = require("./crud")
 
 // =============================================================================
 
@@ -26,12 +27,16 @@ var hbs = require('express-handlebars');
 
 exports.feature = function(meta4, feature) {
 
-	assert(meta4, "feature needs meta4")
-	assert(meta4.router, "feature needs meta4.router")
-	assert(meta4.app, "feature needs meta4.app")
+	// Sanity Checks
+	assert(meta4,       "feature missing {{meta4}}")
+	assert(meta4.router,"feature missing {{meta4.router}}")
+	assert(meta4.config,"feature missing {{meta4.config}}")
+	assert(meta4.app,   "feature missing {{meta4.app}}")
+	assert(meta4.vents, "feature missing {{meta4.vents}}")
 
-	assert(feature.home, "{{home}} is missing")
-	assert(feature.path, "{{path}} is missing")
+	assert(feature, "{{feature}} is missing")
+	assert(feature.home, "{{feature.home}} is missing")
+	assert(feature.path, "{{feature.path}} is missing")
 
 	// =============================================================================
 
@@ -52,20 +57,53 @@ exports.feature = function(meta4, feature) {
 
 	// Dynamic Branded Views
 
-	router.get(feature.path+"/:type/:id?", function(req, res, next) {
-		var page = req.params.type
-		var id = req.params.id
+	router.get(feature.path+"/:page/:id?", function(req, res, next) {
 
-		if (id) {
-			var CRUD = features.get('crud');
-			DEBUG&&console.log("[meta4] Features: ", CRUD )
+		var id = req.params.id
+		var page = req.params.page
+		var collection = feature.collection || feature.id
+
+		var data = _.extend({}, req.query, req.body )
+		var model = { meta: data, user: req.user, brand: brand }
+
+		var crud = factory.models[collection]
+
+		// no matching collection
+		if (!crud) {
+DEBUG&&console.log("Brand Page", page, collection)
+			res.render(page, model)
+			return;
 		}
 
-		var model = { user: req.user, brand: brand, page: { path: brand.path+id, id: page } }
-//		console.log("Brand Page", req.isAuthenticated(), id, model)
-		res.render(page, model)
+		// find siblings
+		var CRUD = factory.CRUD(crud)
+
+		CRUD.read( data, function(results) {
+
+			model[collection] = results.data || [];
+
+			// filter item by 'id' or 'page'
+			data.id = id || page;
+
+			// vent our intentions
+			meta4.vents.emit(feature.id, page, data);
+			meta4.vents.emit(feature.id+":"+page, data);
+
+			// find slug instance
+			CRUD.find( data, function(results) {
+				model.it = results.data || {}
+
+				// render page + model
+				try {
+					DEBUG&&console.log("Model Page", page, collection, results.data)
+					res.render(page, model)
+				} catch(e) {
+					res.send(404, "missing "+page)
+				}
+			})
+		})
 	});
 
-	DEBUG&&console.log("[meta4] Pages: "+feature.path+" @ ",templateHome)
+	DEBUG&&console.log("[meta4pages] Pages: "+feature.path+" @ ",templateHome)
 
 }
