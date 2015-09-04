@@ -18,6 +18,7 @@ var crypto     = require('crypto');         // encryption
 var fs         = require('fs');             // file system
 var paths      = require('path');           // file path helper
 var _          = require('underscore');     // collections helper
+var __         = require('underscore-deep-extend')
 
 // =============================================================================
 // meta4 packages
@@ -29,6 +30,7 @@ var install     = require('./install');         // grunt-powered installer
 var app         = express();                    // create app using express
 var httpd       = require('http').Server(app);  // create app server
 var io          = false // require('socket.io')(httpd);  // networked events
+var hbs         = require('express-handlebars');
 
 // =============================================================================
 // support POST payloads
@@ -47,6 +49,18 @@ var self = module.exports = new EventEmitter()
 
 self.features = features
 
+// hack to expose utils
+
+self.utils = {
+    "express": express,
+    "hbs": hbs,
+    "_": _,
+    "__": __
+}
+
+
+_.mixin( { deepExtend: __(_) } );
+
 self.announce = function() {
     console.log("                _        _  _\n\
  _ __ ___   ___| |_ __ _| || |\n\
@@ -57,9 +71,9 @@ self.announce = function() {
     var meta4node_pkg = require('../package.json');
     console.log("\tv"+meta4node_pkg.version+" by troven\n")
 
-}
+};
 
-self.cli = function() {
+self.cli = function(cb_features) {
     var argv       = require('minimist')(process.argv.slice(2));    // cmd line arguments
     var args = argv['_']
 
@@ -70,37 +84,69 @@ self.cli = function() {
             var pkg = err?{ name: "meta4demo", version: "0.0.0" }:JSON.parse(data)
             install.install(pkg.name, BOOT_FILE, argv)
             self.announce()
-            self.boot(BOOT_FILE, _.extend(argv,pkg) )
+            self.boot(BOOT_FILE, _.extend(argv,pkg), function(err, config) {
+	            if (cb_features) {
+		            cb_features(err, config, function(features) {
+			            self.start(features)
+		            })
+	            } else {
+		            self.start(config)
+	            }
+            } )
         })
     }
 
     if (args.length>0) {
         self.announce()
         args.forEach(function(path) {
-            self.boot(path+"/"+BOOT_FILE, argv)
+            self.boot(path+"/"+BOOT_FILE, argv, function(err, config) {
+	            self.start(config, callback)
+            })
         })
     }
-}
+};
 
 self.boot = function(filename, options, callback) {
     // read meta4 boot file
     fs.readFile(filename, function(error, data) {
         assert(!error, "Failed to boot:"+ filename)
         var config = JSON.parse(data);
-		config.home = paths.normalize(paths.dirname(filename)+"/"+config.home)
-        // merge with runtime options
-        config = _.extend(config, options)
-        console.log("[meta4] booting :", paths.normalize(filename))
+        config.home = paths.normalize(paths.dirname(filename)+"/"+config.home)
 
-        self.start( config, callback )
+	    // merge with runtime options
+        self._config = _.extend(config, options)
+	    console.log("[meta4] booting :", paths.normalize(filename))
+	    callback && callback(null, self._config)
     });
 }
 
-// =============================================================================
-// configure and launch the meta4node server
-// multiple command-line arguments can instantiate virtual hosts
+/**
+ * Configure a Feature Machine (Node-Machine that returns a feature map)
+ *
+ * @param featureMachine
+ * @returns {*}
+ */
+self.plugin = function(featureMachine) {
 
-self.start = function(config) {
+    if (featureMachine.fn) {
+        var features = featureMachine.fn(self._config);
+        return self.features.registerAll(features.features)
+    }
+
+    return false
+
+};
+
+/**
+ * configure and launch the meta4node server
+ * multiple command-line arguments can instantiate virtual hosts
+ *
+ * @param config        meta4.json object
+ * @param callback      onStart callback
+ * @returns {*}
+ */
+
+self.start = function(config, callback) {
 
     assert(config.home, "Missing {{home}}")
     assert(config.name, "Missing {{name}}")
@@ -109,7 +155,7 @@ self.start = function(config) {
     console.log("[meta4] home dir:", config.home)
 
     // boot configuration
-    var SESSION_SECRET = config.salt || "SECRET_"+config.name+"_"+new Date().getTime()
+    var SESSION_SECRET = config.salt || config.name+"_"+new Date().getTime()
 
     // configure paths & directories
     config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
@@ -122,10 +168,8 @@ self.start = function(config) {
 		self.shutdown(config);
 	})
 
-    // =============================================================================
-    // configure Express Router
-
-    var router = express.Router();              // get an instance of the express Router
+    // get an instance of the express Router
+    var router = express.Router();
 
 	// Cookies
 	app.use(cookies());
@@ -154,7 +198,7 @@ self.start = function(config) {
 	app.use(config.basePath, router);
 
 	// configure meta4 Features
-    var meta4 = { app: app, router: router, io: io, config: config, vents: self }
+    var meta4 = { app: app, router: router, io: io, config: config, vents: self, features: self.features }
 	features.configure(meta4)
 
 	// start HTTP server
@@ -164,6 +208,9 @@ self.start = function(config) {
         console.log("[meta4] NodeJS  :", process.version, "("+process.platform+")")
         console.log("[meta4] module  :", config.name, "v"+config.version || "0.0.0")
         console.log('[meta4] login ->: http://' + config.url, "\n");
+
+	    self.emit("start", config)
+	    callback && callback(null, config)
     });
 
 	// TODO: fix client-side bug
@@ -178,8 +225,13 @@ self.start = function(config) {
 }
 
 self.shutdown = function(config) {
+	self.emit("shutdown:"+config.name, config)
+
 	_.each(config.features, function(feature, key) {
 		features.teardown(feature)
 	})
+
+	self.emit("shutdown", config)
+
 	process.exit();
 }

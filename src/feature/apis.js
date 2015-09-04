@@ -1,4 +1,4 @@
-var exports = module.exports = module.exports || {};
+var exports = module.exports
 
 // =============================================================================
 // framework packages

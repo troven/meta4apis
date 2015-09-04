@@ -1,4 +1,4 @@
-var exports = module.exports = module.exports || {};
+var self = module.exports
 
 // =============================================================================
 // framework packages
@@ -25,46 +25,46 @@ var hbs = require('express-handlebars');
 // =============================================================================
 // configure the API routes
 
-exports.feature = function(meta4, feature) {
+self.feature = function(meta4, feature) {
 
 	// Sanity Checks
-	assert(meta4,       "feature missing {{meta4}}")
-	assert(meta4.router,"feature missing {{meta4.router}}")
-	assert(meta4.config,"feature missing {{meta4.config}}")
-	assert(meta4.app,   "feature missing {{meta4.app}}")
-	assert(meta4.vents, "feature missing {{meta4.vents}}")
+	assert(meta4,       "feature missing {{meta4}}");
+	assert(meta4.router,"feature missing {{meta4.router}}");
+	assert(meta4.config,"feature missing {{meta4.config}}");
+	assert(meta4.app,   "feature missing {{meta4.app}}");
+	assert(meta4.vents, "feature missing {{meta4.vents}}");
 
-	assert(feature, "{{feature}} is missing")
-	assert(feature.home, "{{feature.home}} is missing")
-	assert(feature.path, "{{feature.path}} is missing")
+	assert(feature, "{{feature}} is missing");
+	assert(feature.home, "{{feature.home}} is missing");
+	assert(feature.path, "{{feature.path}} is missing");
 
 	// =============================================================================
 
-	var app = meta4.app, router = meta4.router, config = meta4.config
-	var brand = _.extend({ name: config.name, description: config.description || "", path: config.basePath }, feature.brand)
-	var templateHome = feature.home
-	var DEBUG = feature.debug || true
+	var app = meta4.app, config = meta4.config;
+	var templateHome = feature.home;
+	var DEBUG = feature.debug || true;
+
+    var router = express();
 
 	// =============================================================================
 
 	//https://github.com/ericf/express-handlebars
-	app.engine('.html', hbs({defaultLayout: false, extname: '.html'}));
+	router.engine('.html', hbs({defaultLayout: false, extname: '.html', settings: { views: templateHome } }));
 
-	app.set('view engine', '.html');
-	app.set('views', templateHome);
-
-	// =============================================================================
+    router.set('view engine', '.html');
+	router.set('views', templateHome);
+    app.use(config.basePath+feature.path, router)
 
 	// Dynamic Branded Views
 
-	router.get(feature.path+"/:page/:id?", function(req, res, next) {
+	router.get("/:pageType/:id?", function(req, res, next) {
 
-		var id = req.params.id
-		var page = req.params.page
+		var id = req.params.id || "index"
+		var page = req.params.pageType
 		var collection = feature.collection || feature.id
 
-		var data = _.extend({}, req.query, req.body )
-		var model = { meta: data, user: req.user, brand: brand }
+		var data = _.extend({}, req.query, req.body, req.params )
+		var model = { meta: data, user: req.user, brand: req.brand }
 
 		var crud = factory.models[collection]
 
@@ -95,7 +95,8 @@ DEBUG&&console.log("Brand Page", page, collection)
 
 				// render page + model
 				try {
-					DEBUG&&console.log("Model Page", page, collection, results.data)
+//DEBUG&&
+console.log("Model Page", page, collection, model, req.sitepath)
 					res.render(page, model)
 				} catch(e) {
 					res.send(404, "missing "+page)
@@ -103,7 +104,5 @@ DEBUG&&console.log("Brand Page", page, collection)
 			})
 		})
 	});
-
-	DEBUG&&console.log("[meta4pages] Pages: "+feature.path+" @ ",templateHome)
 
 }

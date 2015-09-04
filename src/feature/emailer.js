@@ -1,4 +1,4 @@
-var exports = module.exports = module.exports || {};
+var self = module.exports
 
 // =============================================================================
 // framework packages
@@ -24,7 +24,7 @@ var hbs = require('express-handlebars');
 // =============================================================================
 // configure the API routes
 
-exports.feature = function(meta4, feature) {
+self.feature = function(meta4, feature) {
 
 	assert(meta4, "feature needs meta4")
 	assert(meta4.router, "feature needs meta4.router")

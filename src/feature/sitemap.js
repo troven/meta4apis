@@ -31,7 +31,6 @@ self.feature = function(meta4, feature) {
 	assert(meta4.vents, "feature missing {{meta4.vents}}")
 
 	assert(feature, "{{feature}} is missing")
-	assert(feature.home, "{{feature.home}} is missing")
 	assert(feature.path, "{{feature.path}} is missing")
 
 	// =============================================================================
@@ -39,10 +38,27 @@ self.feature = function(meta4, feature) {
 	var router = meta4.router, config = meta4.config
 
 	// Feature Routing
-	router.get(feature.path, function (req, res, next) {
+	router.get("/*", function (req, res, next) {
+		var tox = req.url.split("/")
 
-		// do something
+//console.log("SiteMap", tox, feature)
+		var sitepath = feature
+		var last = false
+		_.each(tox, function(v,k) {
+			if( v && sitepath[v]) {
+				sitepath = sitepath[v]
+			} else if (last && v) {
+				sitepath.focus = sitepath.focus || {}
+				sitepath.focus[last] = v
+			}
+			last = v
 
+		})
+		req.sitepath = sitepath
+		req.sitemap = feature
+//console.log("SitePath", req.url, sitepath);
+
+		next && next()
 	})
 
 }

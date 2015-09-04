@@ -46,7 +46,7 @@ self.feature = function(meta4, feature) {
         forgot: "/forgot"
     })
 
-	var DEBUG = feature.debug || true
+	var DEBUG = feature.debug || false
 
 	if (self._isInstalled) {
 		console.log("Skip re-init AUTH")
@@ -63,7 +63,7 @@ self.feature = function(meta4, feature) {
 	// CRUD-based Authentication
 
 	var crudFactory    = require("./crud")
-	crudFactory.feature(meta4, feature.crud)
+	crudFactory.feature(meta4, _.extend({}, config.features.crud, feature.crud))
 
 	var crud = crudFactory.models["meta4users"]
 	if (!crud) throw new Error("Auth missing [meta4users] model")
@@ -87,12 +87,10 @@ self.feature = function(meta4, feature) {
 	passport.use(strategy);
 
 	passport.serializeUser(function(user, done) {
-		console.log("serializeUser:", user)
 		done(null, user);
 	});
 
 	passport.deserializeUser(function(user, done) {
-		console.log("deserializeUser:", user)
 		done(null, user);
 	});
 
@@ -115,7 +113,7 @@ self.feature = function(meta4, feature) {
 			}
 
 			var rolesAllowed = CompareRoles(options.roles, req.user.roles)
-			console.log("auth roles", rolesAllowed, options.roles, req.user.roles)
+DEBUG&&console.log("auth roles", rolesAllowed, options.roles, req.user.roles)
 
 			if ( !rolesAllowed ) {
 				// no valid roles - denied
@@ -146,7 +144,7 @@ self.feature = function(meta4, feature) {
 		failureFlash: failureFlash
 	}
 
-	console.log("login paths:", basePath, paths)
+DEBUG&&console.log("login paths:", basePath, paths)
 
 	// USER HOME PAGE
 
@@ -222,12 +220,10 @@ self.feature = function(meta4, feature) {
 
 // console.log("Protecting", options.path, options)
 
-		router.get(options.path, function(req,res,next) {
-//console.log("Protected", req.path, req.user?req.user:"GUEST")
-			// check if Authenticated and Authorized
+		router.use(options.path, function(req,res,next) {
 			EnsureAuthenticated(req, res, false) && EnsureAuthorized(options, req, res, next)
-
 		})
+
 	})
 
 }

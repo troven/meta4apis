@@ -5,6 +5,7 @@
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var paths      = require('path');           // file path helper
+var express    = require('express');        // call express
 
 // =============================================================================
 // meta4 packages
@@ -18,13 +19,37 @@ var self = module.exports
 
 // =============================================================================
 
-var DEBUG       = true;
+var DEBUG       = false;
 self.__features = {};
 
-self.register = function(key, feature) {
-	if (!key || !feature) throw new Error("Feature can't be registered: "+key);
-	self.__features[key] = feature
-	return feature
+// allow 3rd party features to use internal resources
+
+self.register = function(key, options) {
+	if (!key || !options) throw new Error("Feature can't be registered: "+key);
+
+    options.id = options.id || key
+
+    options.path = options.path || "/"+options.id
+
+    options.package = options.package || options.id
+    options.requires = options.requires || './feature/'+options.package
+
+    if (options.home) {
+        helpers.files.mkdirs(options.home)
+    }
+
+	return self.__features[options.id] = _.extend({}, self.__features[options.id], options)
+}
+
+
+self.registerAll = function(features) {
+    if(!features) return false;
+
+    _.each(features, function(feature, key) {
+        self.register(feature.id || key, feature);
+    })
+
+    return self.all();
 }
 
 self.get = function(id) {
@@ -32,22 +57,7 @@ self.get = function(id) {
 }
 
 self.all = function() {
-	return _.extend({}, self.__features)
-}
-
-self.install = function(config) {
-	self.defaults(config)
-
-    if(!config.features) return;
-    assert(config.home, "Feature.install is missing {{home}}")
-
-    var sorted = _.sortBy( _.values(features) , function(a) { return a.order?a.order:a.path.length })
-    _.each(sorted, function(feature) {
-        var fn   = self.__features[feature.package] || require(feature.requires);
-        if (fn && fn.install) {
-            fn.install(feature, config)
-        }
-    })
+	return _.extend({}, self.__features) // immutable collection
 }
 
 self.defaults = function(config) {
@@ -73,6 +83,7 @@ self.defaults = function(config) {
     // configure UX
     features.ux = _.extend({
         path: "/ux",
+	    modelPath: "/models",
         requires: "meta4ux",
         home: config.home,
         paths: {
@@ -97,16 +108,19 @@ self.defaults = function(config) {
         home: config.home+"/templates/server"
     }, features.pages)
 
-	// configure Node Machines
+    // configure ClickTrack
+    features.clicktrack = {
+        path: "/clicktrack",
+        collection: "clicktrack"
+    }
+
+
+    // configure Node Machines
 	features.machine = _.extend({
 		"path": "/do",
 		"home": config.home+"/features/machines",
 		"repository": "http://nodemachine.org",
 		"config": {
-			"github": {
-				"repo": "meta4",
-				"owner": "troven"
-			}
 		},
 		roles: [ "user" ]
 	}, features.machine)
@@ -124,37 +138,36 @@ self.defaults = function(config) {
             signup: "/signup"
         }
     }, features.auth)
+
+    return self.registerAll(features);
 }
 
+/**
+ * Iterates over each registered feature.
+ *
+ * @param meta4
+ */
 self.configure = function(meta4) {
 
 	var router = meta4.router, config = meta4.config
     assert(config.home, "Feature.configure is missing {{home}}")
 
-    // default configuration
-    var features = config.features = config.features || {}
-	self.defaults(config)
+    // register default features
+	var features = self.defaults(config)
 
-    // =============================================================================
-    // Load and configure Feature
-
-    // ensure feature's have both a package & a path
-
+    // base-path is relative
     _.each(features, function(options, key) {
-	    options.id = options.id || key
-        options.path = options.path || "/"+options.id
 	    options.basePath = config.basePath + "/"+options.path
-
-        options.package = options.package || options.id
-        options.requires = options.requires || './feature/'+options.package
-        if (options.home) helpers.files.mkdirs(options.home)
     });
 
     // match longest (most specific) paths first
     var sorted = _.sortBy( _.values(features) , function(a) { return a.order?a.order:a.path.length })
-    console.log("[meta4] features:", _.pluck(sorted, "package"))
+
+    // special feature ordering
 
 	self._configureFeature(meta4, features.auth )
+	self._configureFeature(meta4, features.brand )
+	self._configureFeature(meta4, features.sitemap )
 
     // naively prioritize routes based - shortest paths first
     _.each(sorted, function(options) {
@@ -164,36 +177,47 @@ self.configure = function(meta4) {
     return
 }
 
+/**
+ *
+ * @param meta4
+ * @param options
+ * @returns {boolean}
+ * @private
+ */
 self._configureFeature = function(meta4, options) {
+	if (!options || options.fn) return false;
+
     if (options.disabled) { console.log("[meta4] disabled:", options.package); return; }
 
-	var pkg = options.requires || options.package
+    // if static function is declared, use it - otherwise defer loading to require()
 
-    // static cache features
-    console.log("[meta4] enabled :", options.package, " -> ", options.path, "@", options.home)
-    var fn   = self.__features[options.package] || require( pkg );
+    var pkg = options.requires || options.package
+    var fn   = _.isFunction(options.feature)?options: require( pkg );
 
     if (fn.feature) {
 
-	    // install feature & cache result as static options
-	    // i.e. pre-load expensive resources
+	    // install feature & cache result as static options i.e. pre-load expensive resources
+
         if (fn.install && !fn.options) {
 	        fn.options = _.extend({}, options, fn.install(options, meta4.config))
-	        console.log("Feature Installed: ", options.package, fn.options)
+//DEBUG &&
+console.log("[meta4] feature installed: %s -> %s @ %s", options.id, options.path, options.package)
+        } else {
+console.log("[meta4] feature: %s -> %s @ %s", options.id, options.path, options.package )
         }
 
-	    // configure feature ...
-	    // i.e. attach routers / request handlers
+	    // configure feature ... attach routers / request handlers
         try {
+
             var public_fn = fn.feature(meta4, options) || fn
-	        fn._isInstalled = true
-	        self.register(options.id, public_fn)
+            options.fn = public_fn
+
         } catch(e) {
-            console.log("Feature Failed", options.package, e)
+DEBUG && console.log("Feature Failed", options.package, e)
 	        throw e
         }
     } else {
-	    console.log("skip feature: ", options.id, "@", pkg)
+DEBUG && console.warn("skip feature: ", options.id, "@", pkg)
     }
 }
 

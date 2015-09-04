@@ -1,4 +1,4 @@
-var exports = module.exports = module.exports || {};
+var self = module.exports
 
 // =============================================================================
 // framework packages
@@ -17,7 +17,7 @@ var helper     = require('meta4helpers');   // files & mixins
 // =============================================================================
 // configure the API routes
 
-exports.feature = function(meta4, feature) {
+self.feature = function(meta4, feature) {
 
 	var router = meta4.router, config = meta4.config
 

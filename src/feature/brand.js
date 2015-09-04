@@ -4,8 +4,8 @@ var self = module.exports
 // framework packages
 
 var fs         = require('fs');             // file system
-var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
+var _          = require('underscore');     // collections helper
 
 
 // =============================================================================
@@ -31,18 +31,19 @@ self.feature = function(meta4, feature) {
 	assert(meta4.vents, "feature missing {{meta4.vents}}")
 
 	assert(feature, "{{feature}} is missing")
-	assert(feature.home, "{{feature.home}} is missing")
 	assert(feature.path, "{{feature.path}} is missing")
+
+	assert(!feature.installed, "branding is already installed")
 
 	// =============================================================================
 
 	var router = meta4.router, config = meta4.config
 
+	self.installed = true
 	// Feature Routing
-	router.get(feature.path, function (req, res, next) {
-
-		// do something
-
+	router.get("/*", function (req, res, next) {
+		req.brand = _.extend({}, feature)
+		next && next()
 	})
 
 }

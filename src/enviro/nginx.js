@@ -1,4 +1,4 @@
-var self = module.exports
+var exports = module.exports
 
 // =============================================================================
 // framework packages
@@ -10,26 +10,14 @@ var paths           = require('path');           // file path helper
 // =============================================================================
 
 var helper          = require('meta4helpers');   // files & mixins
-//var hb              = require('mustache');
 
-self.install = function(onInstalled) {
-    var argv       = require('minimist')(process.argv.slice(2));    // cmd line arguments
-    var args = argv['_']
+exports.install = function(meta4, filename) {
 
-    var pkg = require("../meta4.json")
-//    console.log("Install ", pkg)
+    assert(meta4, "Missing {{meta4}}")
+    assert(filename, "Missing {{filename}}")
 
-    // Configure ...
+    var conf = fs.readSync("./nginx.txt")
+console.log("NGINX: "+conf)
 
-    // NGINX
-    // PM2
-    // Bash
-    // DB / Backup / Restore
-    // Cron
-    // /etc/hosts
-
-
+    return _defaults
 }
-
-
-self.install();
