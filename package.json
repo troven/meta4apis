@@ -1,6 +1,6 @@
 {
   "name": "meta4node",
-  "version": "0.7.48",
+  "version": "0.7.49",
   "description": "A server for executable 'meta4' wire-frames",
   "scripts": {
     "start": "node src/index.js",
