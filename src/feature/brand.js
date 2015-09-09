@@ -33,13 +33,14 @@ self.feature = function(meta4, feature) {
 	assert(feature, "{{feature}} is missing")
 	assert(feature.path, "{{feature.path}} is missing")
 
-	assert(!feature.installed, "branding is already installed")
+	assert(!feature.installed, "brand feature is already installed")
 
 	// =============================================================================
 
 	var router = meta4.router, config = meta4.config
 
 	self.installed = true
+
 	// Feature Routing
 	router.get("/*", function (req, res, next) {
 		req.brand = _.extend({}, feature)

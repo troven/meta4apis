@@ -32,6 +32,8 @@ self.feature = function(meta4, feature) {
 
 	assert(feature.home, "{{home}} is missing")
 	assert(feature.path, "{{path}} is missing")
+    assert(feature.sendgrid, "{{sendgrid}} config is missing")
+    assert(feature.sendgrid.apiKey, "{{sendgrid}} API key is missing")
 
 	// =============================================================================
 
@@ -40,7 +42,26 @@ self.feature = function(meta4, feature) {
 	var templateHome = feature.home
 	var DEBUG = feature.debug || true
 
-	// =============================================================================
+    self.sendgrid  = require('sendgrid')(feature.sendgrid.apiKey);
+    self.send = self.sendgrid.send;
+
+    // =============================================================================
+
+    // Retrieve Email Queue
+
+    router.get(feature.path+"/test", function(req, res, next) {
+        var msg = _.extend({ subject: "Test", "text": "This is a test "+new Date() }, req.query, feature.default )
+
+        self.sendgrid.send(msg, function(err, result) {
+            if (err) {
+                console.log("Email Failed (%s) - to: %s", err, msg.to)
+                res.status(500).send("SendGrid failed: "+err)
+            } else {
+                console.log("Email Sent - to "+msg.to)
+                res.json( { model: msg, meta: {}, status: result.message } )
+            }
+        })
+    });
 
 	// Retrieve Email Queue
 

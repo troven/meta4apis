@@ -113,7 +113,6 @@ self.defaults = function(config) {
         collection: "clicktracks"
     }
 
-
     // configure Node Machines
 	features.machine = _.extend({
 		"path": "/do",
