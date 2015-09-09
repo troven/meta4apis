@@ -11,6 +11,7 @@ var assert     = require('assert');         // assertions
 // meta4 packages
 
 var helper     = require('meta4helpers');   // files & mixins
+var factory    = require("./crud")
 
 // =============================================================================
 
@@ -31,7 +32,6 @@ self.feature = function(meta4, feature) {
     assert(meta4.vents, "feature missing {{meta4.vents}}")
 
     assert(feature, "{{feature}} is missing")
-    assert(feature.home, "{{feature.home}} is missing")
     assert(feature.path, "{{feature.path}} is missing")
 
     // =============================================================================
@@ -41,21 +41,21 @@ self.feature = function(meta4, feature) {
     // Feature Routing
     router.get(feature.path+"/:id", function (req, res, next) {
 
-        var collection = feature.collection || feature.id
+        var collection = feature.collection || 'clicktracks'
 
         var data = _.extend({}, req.query, req.params )
         data.ip = req.ip
 
         var crud = factory.models[collection]
-        assert(crud, "{{feature.collection}} is missing")
+        assert(crud, "{{feature.collection}} is missing: "+collection)
 
         // find siblings
         var CRUD = factory.CRUD(crud)
         CRUD.create( data, function(results) {
-            var uuid = req.signedCookies.clicktrack || uuid.v4()
-            res.cookie('clicktrack', uuid, { signed: true });
+            var uid = req.signedCookies.clicktrack || uuid.v4()
+            res.cookie('clicktrack', uid, { signed: true });
 
-            console.log("ClickTrack %s -> %j", uuid, results)
+            console.log("ClickTrack %s -> %j", uid, results)
         })
 
     })

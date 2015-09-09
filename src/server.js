@@ -172,7 +172,7 @@ self.start = function(config, callback) {
     var router = express.Router();
 
 	// Cookies
-	app.use(cookies());
+	app.use(cookies(SESSION_SECRET));
 
 	// JSON Body Parser
 	app.use(bodyParser.urlencoded({ extended: true }));

@@ -79,7 +79,6 @@ self.defaults = function(config) {
         data: config.home+"/models/data",
     }, features.crud)
 
-
     // configure UX
     features.ux = _.extend({
         path: "/ux",
@@ -111,7 +110,7 @@ self.defaults = function(config) {
     // configure ClickTrack
     features.clicktrack = {
         path: "/clicktrack",
-        collection: "clicktrack"
+        collection: "clicktracks"
     }
 
 
