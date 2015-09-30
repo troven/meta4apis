@@ -35,16 +35,12 @@ self.feature = function(meta4, feature) {
     feature = _.extend({
         path: "upload",
         home: "uploads",
-	    collection: "meta4assets",
-        can: { download: true, upload: true },
-        limits: {
-            fieldNameSize: 100,
-            files: 2,
-            fields: 5
-        }
+	    collection: "meta4assets", can: {}, limit: {}
     }, feature)
 
-	// Permissions
+    feature.can = _.extend( { download: true, upload: true }, feature.can);
+    feature.limits = _.extend({ fieldNameSize: 100, files: 2, fields: 5 });
+
 
     if (feature.can.download) {
 		router.get(feature.path+"/*", self.downloader(feature, meta4));
@@ -66,6 +62,7 @@ self.uploader = function(feature, meta4) {
     helper.files.mkdirs(uploadDir)
 
     return function(req, res, next) {
+
         var _multer =  multer({
 
             limits: feature.limits,

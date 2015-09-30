@@ -41,69 +41,108 @@ self.feature = function(meta4, feature) {
 		return
 	}
 	self.models = helper.mvc.reload.models(feature.home, feature)
-	self.options = feature // TODO: deprecate? -- too much state?
 
-	// merge local and global upload configuration
-    var feature_upload = _.extend( {}, require('../features').get('upload'), feature.upload )
+    feature.can = _.extend({ download: true, upload: true }, feature.can);
 
-    if (!feature_upload.disabled) {
-        router.use(feature.path+'/:collection/_upload_', upload.uploader( feature_upload, meta4) )
+    self.options = feature // TODO: deprecate? -- too much state?
+
+    if (feature.can.upload) {
+        // merge local and global upload configuration
+        var feature_upload = _.extend( {}, require('../features').get('upload'), feature.upload )
+
+        var path = feature.path+'/:collection/_upload_'
+        console.log("[crud] upload: %s %j", path, feature.can )
+        router.use(path, upload.uploader( feature_upload, meta4) )
+
+        if (feature.can.download) {
+            // TODO
+        }
     }
+
+    // ensure CRUD permissions - feature permissions take precedence
+    var modelDefaults = function(model) {
+        model.can = _.extend({create: true, read: true, update: true, delete: true}, model.can, feature.can);
+    }
+
+    _.each(self.models, modelDefaults)
 
 	self.install(feature, function(err) {
 		console.log("CRUD installed", err)
 	})
 
+    if (feature.can.install) {
+        router.post(feature.path+'/install', function(req, res, next) {
+            self.install(feature, function() {
+                res.json()
+            })
+        });
+    }
+
+    router.get(feature.path+'/about', function(req, res, next) {
+        var models = [];
+        _.each(self.models, function(_model) {
+            // selective pick meta-data
+            var model = _.pick(_model, "id", "label", "comment", "idAttribute", "collection", "schema", "defaults", "can" )
+            models.push(model);
+        })
+        var meta = _.pick(feature, ["id", "path"]);
+
+        res.json({ data: models, meta: meta } );
+    });
+
     router.use(feature.path+'/:collection/:id?', function(req, res, next) {
 
-		var collection = req.params.collection
-		var id = req.params.id
-		var action = HTTP_TO_CRUD[req.method]
+        var id = req.params.id
+        // kludge to prevent match on duplicate routes
+        if (id == "_upload_") return next()
 
-		// kludge to prevent match on duplicate routes
-		if (id == "_upload_" ) return next()
+        var action = HTTP_TO_CRUD[req.method]
+        var collection = req.params.collection
 
-	    // resolve CRUD configuration
-	    var crud = self.models[collection]
-	    if (!crud) {
-		    next();
-		    return;
-	    }
+        // resolve CRUD configuration
+        var crud = self.models[collection]
+        if (!crud) {
+            next();
+            return;
+        }
 
-	    // dynamic query support
-	    if (id && crud.queries && crud.queries[id]) {
-		    action = id;
-	    }
+        // dynamic query support
+        if (id && crud.queries && crud.queries[id]) {
+            action = id;
+        }
 
-	    // Instantiate dynamic CRUD
-	    var CRUD = self.CRUD(crud);
+        console.log("GET: %j -> %j", req.query, req.body)
+        // unified command meta-data by merging Form fields (POST) & query params (GET)
+        var cmd = _.extend({}, req.query, req.body);
 
-	    // unknown action / unknown query
-	    if (!CRUD[action]) {
-		    res.send(404);
-		    return;
-	    }
+        // Instantiate dynamic CRUD
+        var CRUD = self.CRUD(crud);
 
-	    // hedge our bets - merge form fields (POST) & query params (GET)
-	    var cmd = _.extend({}, req.query, req.body );
+        // unknown action / unknown query
+        if (!CRUD[action]) {
+            res.send(404);
+            return;
+        }
 
-	    // execute
-		CRUD[action](cmd, function(result) {
+        if (id) cmd.id = id;
+        cmd.collection = collection;
+        cmd.action = action;
 
-			cmd.id = id;
-			cmd.collection = collection;
+        var renderResult = function (result) {
 
-            console.log("CRUD %s %s -> %s @ %s", feature.id, action, id, collection)
+            console.log("[crud] %s %j -> (%s rows)", feature.path, cmd, result.data.length)
 
-			// vent our intentions
-			meta4.vents.emit(feature.id, req.user||false, cmd, result.data||false);
-			meta4.vents.emit(feature.id+":"+collection+":"+action, req.user||false, cmd, result.data||false);
+            // vent our intentions
+            meta4.vents.emit(feature.id, req.user || false, cmd, result.data || false);
+            meta4.vents.emit(feature.id + ":" + collection + ":" + action, req.user || false, cmd, result.data || false);
 
-			// send results
-			result["@src"] = req.baseUrl;
-			res.json(result);
-		})
+            // send results
+            result["@src"] = req.baseUrl;
+            res.json(result);
+        };
 
+        // execute
+        CRUD[action](cmd, renderResult);
     });
 }
 
@@ -114,6 +153,20 @@ self.get = function(collection) {
 }
 
 
+self.execute = function(action,  collection, options, cb) {
+    if (!_.isString(action)) throw new Error("Action is valid: "+action)
+    if (!_.isString(collection)) throw new Error("Collection is valid: "+action)
+
+    var cmd = _.extend({ "@action": action, "@collection": collection }, options);
+
+    // Instantiate dynamic CRUD
+    var crud = self.models[ cmd['@collection'] ]
+    var CRUD = self.CRUD(crud);
+
+    // options is optional, it may be our callback
+    return CRUD[cmd['@action']](cmd, _.isFunction(options)?options:cb );
+}
+
 self.install = function(feature, cb) {
 	_.each(self.models, function(crud, id) {
 		var CRUD = self.CRUD(crud);
@@ -121,6 +174,11 @@ self.install = function(feature, cb) {
 			return;
 		};
 		CRUD.install(crud, cb);
+        crud.id = crud.id || id
+
+        // ensure we have a namespace for each model
+        self[crud.id] = _.extend({}, self[crud.id])
+//        self[crud.id] = _.extend({}, self[crud.id])
 	})
 }
 // =============================================================================
@@ -139,41 +197,58 @@ self.CRUD = function(crud, user) {
 	}
 
 	// resolve database-specific adapter implementation
+	// crud.store is legacy config
 	var adapter = require( crud.requires || "./crud/adapter/"+(crud.store || crud.adapter.type) )
 
 	// send error
-	if (!adapter) throw new Error("[meta4crud] missing adapter: "+requires);
+	if (!adapter) throw new Error("[crud] missing adapter: "+requires);
 
 	// Switchback encapsulates a raw Adapter
+    // call before / after functions
+
 	var CRUD = {
 		install: function (config, cb) {
 			return adapter.install ? adapter.install(crud, config, cb) : false;
 		},
 		create: function (model, cb) {
-			self.meta.create(model, crud, user);
-			return adapter.create ? adapter.create(crud, model, cb) : false;
+            model = self.before.create(model, crud, user);
+			var done = adapter.create ? adapter.create(crud, model, cb) : {}
+            //return self.after.create(, crud, user);
+            return done;
 		},
 		read  : function (model, cb) {
-			self.meta.read(model, crud, user);
-			return adapter.read ? adapter.read(crud, model, cb) : false;
+            model = self.before.read(model, crud, user);
+			var done = adapter.read ? adapter.read(crud, model, cb) : []
+            //return self.after.read(    , crud, user);
+            return done;
 		},
 		update: function (model, cb) {
-			self.meta.update(model, crud, user);
-			return adapter.update ? adapter.update(crud, model, cb) : false;
+            model = self.before.update(model, crud, user);
+            done = adapter.update ? adapter.update(crud, model, cb) : {}
+//            done = self.after.update(model, crud, user);
+            return done;
 		},
 		delete: function (model, cb) {
-			self.meta.delete(model, crud, user);
-			return adapter.delete ? adapter.delete(crud, model, cb) : false;
+            model = self.before.delete(model, crud, user);
+			var done = adapter.delete ? adapter.delete(crud, model, cb) : {};
+            return done;
 		},
 		find  : function (model, cb) {
-			self.meta.find(model, crud, user);
-			return adapter.find ? adapter.find(crud, model, cb) : false;
-		},
+            model = self.before.find(model, crud, user);
+console.log("Find: %j %j", model, crud, _.keys(adapter) )
+            var found = adapter.find ? adapter.find(crud, model, cb) : {};
+//console.log("Found: %s -> %j", crud.id, found)
+//			self.after.find(found.data, crud, user);
+            return found
+        },
 		exists: function (model, cb) {
-			return adapter.exists ? (adapter.exists(crud, model, cb) ? true : false) : false;
+            model = self.before.find(model, crud, user);
+			self.after.find(adapter.exists ? (adapter.exists(crud, model, cb) ? true : {}) : false, crud, user);
+            return model;
 		},
 		query : function (queryName, model, cb) {
-			return adapter.query ? adapter.query(crud, queryName, model, cb) : false;
+            model = self.before.read(model, crud, user);
+			return self.after.read(adapter.query ? adapter.query(crud, queryName, model, cb) : [], crud, user);
 		}
 	}
 
@@ -188,7 +263,7 @@ self.CRUD = function(crud, user) {
 	return CRUD
 }
 
-self.meta = {
+self.before = {
 
 	modified: function(model, crud, user) {
 		var meta = model.meta4 = model.meta4 || {}
@@ -199,7 +274,7 @@ self.meta = {
 		return meta
 	},
 	create: function(model, crud, user) {
-		var meta = self.meta.modified(model, crud, user)
+		var meta = self.before.modified(model, crud, user)
 		meta.createdBy = meta.modifiedBy
 		meta.createdOn = meta.modifiedOn
 		return model;
@@ -208,27 +283,46 @@ self.meta = {
 		return models;
 	},
 	update: function(model, crud, user) {
-		var meta = self.meta.modified(model, crud, user)
-		return model;
+		var meta = self.before.modified(model, crud, user)
+		return model
 	},
 	delete: function(model, crud, user) {
 		return model;
 	},
-	passwords: function(models, crud, user) {
-		_.each(models, function(model) {
-			if (model.password) delete model.password
-		})
-		return models
-	},
 	find: function(model) {
-		if (model.password) delete model.password
 		return model
 	}
+
+}
+
+self.after = {
+
+    create: function(model, crud, user) {
+        return model;
+    },
+    read: function(models, crud, user) {
+        return self.after.passwords(models, crud, user);
+    },
+    update: function(model, crud, user) {
+        return model;
+    },
+    delete: function(model, crud, user) {
+        return model;
+    },
+    passwords: function(result, crud, user) {
+        _.each(result.data, function(model) { return self.after.find(model, crud, user) } );
+        return result
+    },
+    find: function(result, crud, user) {
+        var model = result.data
+        if (model.password) delete model.password
+        return result
+    }
 
 }
 self.teardown = function(options) {
 	console.log("\tclean-up: "+options.package)
 	_.each(self._db, function(db) {
-
+        // NOP
 	})
 }

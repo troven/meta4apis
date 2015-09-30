@@ -39,7 +39,7 @@ DEBUG && console.log("cachedDatabase", crud.id, crud.adapter.database.name )
 		username: 'root',
 		password: 'root',
 		pool: { max: 10 }
-	}, crud.adapter));
+	}, crud.adapter ));
 
 	var db = exports.__server.use(crud.adapter.database.name)
 
@@ -65,12 +65,13 @@ DEBUG && console.log("[orientdb] install:", classname)
 		db.class.get(classname).then(function() {
 
 			exports.close(db);
-DEBUG && console.log('Existing class: ', classname);
+//DEBUG &&
+console.log('[orient] class: ', classname);
 
 		}).catch(function () {
 
 			db.class.create(classname).then(function (myClass) {
-DEBUG && console.log('[orientdb] Created class: ', classname, myClass);
+console.log('[orientdb] Created class: ', classname, myClass);
 				cb && cb( { status: "success", class: myClass })
 				exports.close(db);
 			}).catch(function() {
@@ -206,7 +207,7 @@ DEBUG && console.log("[orientdb] find:",crud.id, query, data)
 		return db.query(query, {params: data }).then(function (results) {
 			DEBUG && console.log("Found: ",where, results)
 			var meta = { filter: data, count: results.length }
-			cb && cb( { status: "success", data: results[0], meta: meta });
+			cb && cb( { status: "success", data: results[0] || {} , meta: meta });
 			exports.close(db);
 		})
 	})
