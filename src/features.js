@@ -178,7 +178,7 @@ self.configure = function(meta4) {
             console.log("Not Configured: %s", options.id)
         } else {
             features[options.id] = configured;
-            console.log("FEATURE: %s %j\n%j", options.id, configured, _.keys(configured.fn))
+            console.log("config feature: %s %j\n%j", options.id, configured, _.keys(configured.fn))
         }
     });
 
@@ -198,8 +198,6 @@ self._configureFeature = function(meta4, options) {
     if (options.disabled) { console.log("[meta4] disabled:", options.package); return; }
 
     // if static function is declared, use it - otherwise defer loading to require()
-
-    console.log("Config Feature: %s %o", options.id, options.feature);
 
     var pkg = options.requires || options.package;
     var fn   = _.isFunction(options.feature)?options: require( pkg );

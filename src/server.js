@@ -159,7 +159,7 @@ self.start = function(config, callback) {
     var SESSION_SECRET = config.salt || config.name+"_"+new Date().getTime();
 
     // configure paths & directories
-    config.basePath = config.basePath || "/"+config.name         // set API base path - defaults to App name
+    config.basePath = config.basePath || "";
 	config.url = config.url || config.host+":"+config.port+config.basePath;
 
     // environmentally friendly

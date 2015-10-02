@@ -29,7 +29,7 @@ self.feature = function(meta4, feature) {
 	assert(meta4.config,"feature missing {{meta4.config}}")
 	assert(meta4.vents, "feature missing {{meta4.vents}}")
 
-	assert(meta4.config.basePath, "feature missing {{meta4.basePath}}")
+//	assert(meta4.config.basePath, "feature missing {{meta4.basePath}}")
 
 	assert(feature.path, "feature missing {{feature.path}}")
 	assert(feature.crud, "feature missing {{feature.crud}}")
