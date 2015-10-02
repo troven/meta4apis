@@ -4,7 +4,6 @@
   "description": "A server for executable 'meta4' wire-frames",
   "scripts": {
     "start": "node src/index.js",
-    "install": "node src/install.js"
   },
   "main": "./src/index.js",
   "keywords": [
