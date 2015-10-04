@@ -29,16 +29,11 @@ exports.feature = function(meta4, feature) {
     // =============================================================================
     // read and install API definitions
 
-    var app = meta4.app;
-    var config = meta4.config;
-    var assetHome = paths.normalize(feature.home);
-    var DEBUG = feature.debug || false;
-
     // configure Assets
     feature = _.extend({
         path: "/",
+        home: __dirname+"/../public/",
         "order": 20,
-        home: config.home+"/public"
     }, feature);
 
     // =============================================================================
@@ -46,7 +41,12 @@ exports.feature = function(meta4, feature) {
 //    var router = express();
 //    app.use(config.basePath || "/", router);
 
+    var app = meta4.app;
+    var config = meta4.config;
+    var DEBUG = feature.debug || false;
+
     var router = meta4.app;
+    var assetHome = paths.normalize(feature.home);
 
     //https://github.com/ericf/express-handlebars
     app.engine('.html', hbs({defaultLayout: false, extname: '.html', settings: { views: assetHome } }));
@@ -67,7 +67,9 @@ exports.feature = function(meta4, feature) {
 
     // embedded static files
     router.get('/*', function(req,res,next) {
-        var file = paths.normalize(assetHome+req.path)
+        var file = req.path;
+        if (!file || file == "/") file = "/index.html";
+        file = paths.normalize(assetHome+file)
         var insideHomeDir = file.indexOf(assetHome);
         console.log("Asset Found : (%s) %s -> %s -> %s", insideHomeDir, file, assetHome, req.path)
         if (insideHomeDir == 0) {
