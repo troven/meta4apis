@@ -78,7 +78,7 @@ exports.feature = function(meta4, feature) {
                 res.sendFile(file);
                 return;
             }
-            next();
+            next && next();
             return;
         }
         // illegal path
