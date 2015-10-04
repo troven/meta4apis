@@ -194,18 +194,19 @@ exports.find = function(crud, data, cb) {
 
 		// TODO: implement 'meta' to instantiate a 'filter'
 		var where = ""
-		_.each(crud.filter, function(v,k) {
+		_.each(crud.filters.find, function(v,k) {
 			where+= where?" AND ":""
 			where+= k+"=:"+k
 
 		})
-		if (!where) where = crud.idAttribute+"=:id"
+		if (!where) where = crud.idAttribute+"=:"+crud.idAttribute;
 
 		var query = "SELECT * FROM "+crud.id+ " WHERE "+where
 DEBUG && console.log("[orientdb] find:",crud.id, query, data)
 
 		return db.query(query, {params: data }).then(function (results) {
-			DEBUG && console.log("Found: ",where, results)
+//			DEBUG &&
+console.log("[orient] Found: %j %s %j",crud, where, results)
 			var meta = { filter: data, count: results.length }
 			cb && cb( { status: "success", data: results[0] || {} , meta: meta });
 			exports.close(db);

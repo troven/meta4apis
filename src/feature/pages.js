@@ -41,7 +41,15 @@ self.feature = function(meta4, feature) {
 	// =============================================================================
 
 	var app = meta4.app, config = meta4.config;
-	var templateHome = feature.home;
+
+    // configure Pages
+    feature = _.extend({
+        path: "/page",
+        home: config.home+"/templates/server"
+    }, feature);
+
+
+    var templateHome = feature.home;
 	var DEBUG = feature.debug || true;
 
     var router = express();

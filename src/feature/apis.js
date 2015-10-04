@@ -19,5 +19,12 @@ exports.feature = function(meta4, feature) {
 
 	var router = meta4.router, config = meta4.config
 
+    // configure API
+    feature = _.extend({
+        path: "/api",
+        home: config.home+"/api"
+    }, feature);
+
+
     // TODO
 }

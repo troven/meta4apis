@@ -30,16 +30,22 @@ self.register = function(key, options) {
 
     options.id = options.id || key;
 
-    options.path = options.path || "/"+options.id;
-    options.can = _.extend( { read: true }, options.can);
-    options.package = options.package || options.id;
-    options.requires = options.requires || './feature/'+options.package;
+    var feature = self.__features[options.id] = _.extend({},self.__features[options.id], options);
 
-    if (options.home) {
-        helpers.files.mkdirs(options.home);
+    if (!(feature.path === false)) {
+//    feature.path = feature.path || "/"+feature.id;
     }
 
-	return self.__features[options.id] = _.extend({}, self.__features[options.id], options)
+    feature.can = _.extend( { read: true }, feature.can);
+    feature.package = feature.package || feature.id;
+    feature.requires = feature.requires || './feature/'+feature.package;
+
+    if (feature.home) {
+        helpers.files.mkdirs(feature.home);
+    }
+
+console.log("Registered: %s -> %j", feature.id, feature);
+    return feature;
 };
 
 
@@ -47,7 +53,7 @@ self.registerAll = function(features) {
     if(!features) return false;
 
     _.each(features, function(feature, key) {
-        self.register(feature.id || key, feature);
+        self.register( feature.id || key, feature );
     });
 
     return self.all();
@@ -61,88 +67,6 @@ self.all = function() {
 	return _.extend({}, self.__features); // immutable collection
 };
 
-self.defaults = function(config) {
-    assert(config.home, "Feature.defaults is missing {{home}}");
-
-    var features = config.features = config.features || {};
-
-    // configure API
-    features.apis = _.extend({
-        path: "/api",
-        home: config.home+"/api"
-    }, features.apis);
-
-    // configure CRUD
-    features.crud = _.extend({
-        path: "/models",
-        requires: "./feature/crud",
-        home: config.home+"/models/meta",
-        data: config.home+"/models/data",
-    }, features.crud);
-
-    // configure UX
-    features.ux = _.extend({
-        path: "/ux",
-	    modelPath: "/models",
-        requires: "meta4ux",
-        home: config.home,
-        paths: {
-            models: config.home+"/models/meta",
-            data: config.home+"/models/data",
-            templates: config.home+"/templates/client",
-            scripts: config.home+"/scripts",
-            views: config.home+"/views"
-        }
-    }, features.ux);
-
-    // CRUD path for UX
-    features.ux.crud = features.ux.crud || features.crud.path
-
-    // configure Assets
-    features.assets = _.extend({
-        path: "/",
-        home: config.home+"/public"
-    }, features.assets);
-
-    // configure Pages
-    features.pages = _.extend({
-        path: "/page",
-        home: config.home+"/templates/server"
-    }, features.pages);
-
-    // configure ClickTrack
-    features.clicktrack = {
-        path: "/clicktrack",
-        collection: "clicktracks"
-    };
-
-    // configure Node Machines
-	features.machine = _.extend({
-		"path": "/do",
-		"home": config.home+"/features/machines",
-		"repository": "http://nodemachine.org",
-		"config": {
-		},
-		roles: [ "user" ]
-	}, features.machine);
-
-    // configure Logins
-    features.auth = _.extend({
-        disabled: true,
-	    crud: features.crud,
-        path: "/",
-        paths: {
-            index:  "/",
-            home:   "/home",
-            login:  "/login",
-            logout: "/logout",
-            signup: "/signup"
-        }
-    }, features.auth);
-
-    return self.registerAll(features);
-};
-
 /**
  * Iterates over each registered feature.
  *
@@ -153,23 +77,31 @@ self.configure = function(meta4) {
 	var router = meta4.router, config = meta4.config
     assert(config.home, "Feature.configure is missing {{home}}")
 
-    // register default features
-	var features = self.defaults(config);
+    if (!self.__features) throw new Error("No Features to configure")
 
-    // base-path is relative
-    _.each(features, function(options, key) {
+    // merge feature with runtime options
+    _.each(config.features, function(options, key) {
         options.id = options.id || key;
-	    options.basePath = config.basePath + "/"+options.path
+console.log("User Configured: %s", options.id)
+        _.extend(self.__features[options.id], options);
+    })
+
+    // force minimal defaults
+    _.each(self.__features, function(options, key) {
+        options.id = options.id || key;
+        options.order = options.order?options.order:100;
+        options.basePath = config.basePath + options.path
     });
 
     // match longest (most specific) paths first
-    var sorted = _.sortBy( _.values(features) , function(a) { return a.order?a.order:a.path.length })
+    var sorted = _.sortBy( _.values(self.__features) , function(a) { return a.order })
 
     // special feature ordering
 
-	self._configureFeature( meta4, features.auth );
-	self._configureFeature( meta4, features.brand );
-	self._configureFeature( meta4, features.sitemap );
+    self._configureFeature( meta4, self.__features.assets );
+	self._configureFeature( meta4, self.__features.auth );
+	self._configureFeature( meta4, self.__features.brand );
+	self._configureFeature( meta4, self.__features.sitemap );
 
     // naively prioritize routes based - shortest paths first
     _.each( sorted, function(options ) {
@@ -177,8 +109,8 @@ self.configure = function(meta4) {
         if (!configured) {
             console.log("Not Configured: %s", options.id)
         } else {
-            features[options.id] = configured;
-            console.log("config feature: %s %j\n%j", options.id, configured, _.keys(configured.fn))
+            _.extend(self.__features[options.id], configured);
+//            console.log("config feature: %s %j\n%j", options.id, configured, _.keys(configured.fn))
         }
     });
 
@@ -195,15 +127,16 @@ self.configure = function(meta4) {
 self._configureFeature = function(meta4, options) {
 	if (!options || options.fn) return false;
 
-    if (options.disabled) { console.log("[meta4] disabled:", options.package); return; }
+    if (options.disabled) {
+        console.log("[meta4] disabled: %s %s %s", options.id, options.package, options.disabled );
+        return;
+    }
 
     // if static function is declared, use it - otherwise defer loading to require()
 
-    var pkg = options.requires || options.package;
+    var pkg = options.requires
+    console.log("CONFIG: %s %s %s", options.id, pkg);
     var fn   = _.isFunction(options.feature)?options: require( pkg );
-
-    // merge package options with feature options
-    options = _.defaults(options, self.__features[pkg])
 
     if (fn.feature) {
 

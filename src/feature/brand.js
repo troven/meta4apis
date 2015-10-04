@@ -31,7 +31,6 @@ self.feature = function(meta4, feature) {
 	assert(meta4.vents, "feature missing {{meta4.vents}}")
 
 	assert(feature, "{{feature}} is missing")
-	assert(feature.path, "{{feature.path}} is missing")
 
 	assert(!feature.installed, "brand feature is already installed")
 

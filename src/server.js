@@ -48,6 +48,7 @@ var self = module.exports = new EventEmitter();
 // process command line & boot application
 
 self.features = features;
+self.__plugins = [];
 
 // hack to expose utils
 
@@ -84,7 +85,7 @@ self.cli = function(cb_features) {
             var pkg = err?{ name: "meta4demo", version: "0.0.0" }:JSON.parse(data)
             install.install(pkg.name, BOOT_FILE, argv);
             self.announce();
-            self.boot(BOOT_FILE, _.extend(argv,pkg), function(err, config) {
+            self.boot(BOOT_FILE, _.extend({},argv,pkg), function(err, config) {
 	            if (cb_features) {
 		            cb_features(err, config, function(features) {
 			            self.start(features)
@@ -129,9 +130,11 @@ self.boot = function(filename, options, callback) {
  */
 self.plugin = function(featureMachine) {
 
-    if (featureMachine.fn) {
-        var features = featureMachine.fn(self._config);
-        return self.features.registerAll(features.features)
+    if (featureMachine.fn && _.isFunction(featureMachine.fn)) {
+        self.__plugins.push(featureMachine);
+        return featureMachine;
+    } else {
+        throw new Error("Invalid Plugin")
     }
 
     return false;
@@ -200,7 +203,17 @@ self.start = function(config, callback) {
 
 	// configure meta4 features
     var meta4 = { app: app, router: router, io: io, config: config, vents: self, features: self.features }
-	features.configure(meta4);
+
+    // register deferred plugins - they need an initialised meta4 config
+    _.each(self.__plugins, function(plugin) {
+        var options = plugin.fn(meta4);
+        if (!options || !options.features) throw "Plugin returned no features"
+        features.registerAll( options.features );
+    })
+    console.log("Registered Plugins ...")
+
+    features.configure(meta4);
+    console.log("Configured Features ...")
 
 	// start HTTP server
     httpd.listen(config.port, function() {

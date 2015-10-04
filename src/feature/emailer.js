@@ -31,10 +31,11 @@ self.feature = function(meta4, feature) {
 	assert(meta4.app, "feature needs meta4.app");
 
 	assert(feature.home, "{{home}} is missing");
-	assert(feature.path, "{{path}} is missing");
     assert(feature.sendgrid, "{{sendgrid}} config is missing");
     assert(feature.sendgrid.apiKey, "{{sendgrid}} API key is missing");
 
+    feature.path = feature.path || feature.id
+    assert(feature.path, "{{path}} is missing");
 	// =============================================================================
 
 	var app = meta4.app, router = meta4.router, config = meta4.config;

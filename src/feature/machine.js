@@ -44,7 +44,20 @@ self.feature = function(meta4, feature) {
 
 	var router = meta4.router, config = meta4.config
 
-	 // dynamically route model / CRUD requests
+    // default configuration
+    feature = _.extend({
+        "path": "/do",
+        "home": config.home+"/features/machines",
+        "repository": "http://nodemachine.org",
+        "config": {
+        },
+        roles: [ "user" ]
+    }, feature);
+
+
+    // =============================================================================
+
+    // dynamically route model / CRUD requests
 	 router.use(feature.path+'/:pack.:machine', function(req, res) {
 	    self.handle(req, res, feature, config, meta4)
 	 } );

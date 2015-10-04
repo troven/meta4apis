@@ -34,6 +34,13 @@ self.feature = function(meta4, feature) {
     assert(feature, "{{feature}} is missing")
     assert(feature.path, "{{feature.path}} is missing")
 
+
+    // configure ClickTrack
+    feature = _.extend({
+        path: "/clicktrack",
+        collection: "clicktracks"
+    },feature);
+
     // =============================================================================
 
     var router = meta4.router, config = meta4.config

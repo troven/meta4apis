@@ -3,6 +3,7 @@ var self = module.exports
 // =============================================================================
 // framework packages
 
+var express    = require('express');        // call express
 var assert     = require('assert');         // assertions
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
@@ -29,9 +30,21 @@ self.feature = function(meta4, feature) {
 
     assert(feature, "{{crud}} feature not configured")
 
-	// =============================================================================
+    // =============================================================================
 
-	var router = meta4.router, config = meta4.config
+	var app = meta4.app, config = meta4.config
+    var router = express.Router();
+
+    // configure CRUD
+    feature = _.extend({
+        path: "/models",
+        requires: "./feature/crud",
+        home: config.home+"/models/meta",
+        data: config.home+"/models/data",
+    }, feature);
+
+
+    app.use(config.basePath, router)
 
     // =============================================================================
 
@@ -157,10 +170,10 @@ self.execute = function(action,  collection, options, cb) {
     if (!_.isString(action)) throw new Error("Action is valid: "+action)
     if (!_.isString(collection)) throw new Error("Collection is valid: "+action)
 
-    var cmd = _.extend({ "@action": action, "@collection": collection }, options);
+    var cmd = _.extend({ "@action": action, "@CLASS": collection }, options);
 
     // Instantiate dynamic CRUD
-    var crud = self.models[ cmd['@collection'] ]
+    var crud = self.models[ cmd['@CLASS'] ]
     var CRUD = self.CRUD(crud);
 
     // options is optional, it may be our callback
@@ -190,7 +203,7 @@ self.install = function(feature, cb) {
 self.CRUD = function(crud, user) {
 
 	// default CRUD meta-data
-	crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {} }, crud )
+	crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {}, filters: {} }, crud )
 
 	if (!crud.isServer && !crud.isRemote) {
 		throw new Error( "model ["+crud.id+"] is client-only" );
