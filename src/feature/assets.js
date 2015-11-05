@@ -53,7 +53,7 @@ exports.feature = function(meta4, feature) {
     app.set('view engine', '.html');
     app.set('views', assetHome);
 
-    console.log("[meta4] ASSET paths: %s, %s @ %s", config.basePath, feature.path, assetHome)
+    console.log("[meta4] ASSET : %s, %s @ %s", config.basePath, feature.path, assetHome)
 
     // =============================================================================
     // application static files
@@ -71,7 +71,7 @@ exports.feature = function(meta4, feature) {
         if (!file || file == "/") file = "/index.html";
         file = paths.normalize(assetHome+file)
         var insideHomeDir = file.indexOf(assetHome);
-        console.log("Asset Found : (%s) %s -> %s -> %s", insideHomeDir, file, assetHome, req.path)
+//        console.log("Asset Found : (%s) %s -> %s -> %s", insideHomeDir, file, assetHome, req.path)
         if (insideHomeDir == 0) {
             var stat = fs.existsSync(file)
             if (stat) {

@@ -43,8 +43,6 @@ self.feature = function(meta4, feature) {
 
 	var DEBUG = feature.debug || false
 
-    console.log("Auth Paths: %s -> %j", feature.path, feature.paths);
-
 	if (self._isInstalled) {
 		console.log("Skip re-init AUTH")
 		return
@@ -65,6 +63,8 @@ self.feature = function(meta4, feature) {
             forgot: "/forgot"
         }
     }, feature);
+
+    console.log("Auth Paths: %s -> %j", feature.path, feature.paths);
 
     var basePath = config.basePath
     var failureFlash = false
@@ -101,7 +101,6 @@ self.feature = function(meta4, feature) {
 			var user = { username: username, password: password }
 
             models.execute("find", collection, user , function(found) {
-console.log("AUTH FOUND: %j", found)
 				if (!found.data || !found.data.roles || found.data.password!=user.password) {
 					return done("not authenticated: "+username);
 				}
@@ -201,7 +200,7 @@ console.log("LOGGED IN: %s", redirectOptions.successRedirect)
 	});
 
     /* Handle Login POST */
-    router.post(feature.paths.login, passport.authenticate('local'), function(req, res) {
+    router.post(feature.paths.login, passport.authenticate('local', redirectOptions), function(req, res) {
 
 	    // vent our intentions
 	    meta4.vents.emit(feature.id, "login", req.user);
