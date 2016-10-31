@@ -83,7 +83,8 @@ self.cli = function(cb_features) {
         var path = "package.json";
         fs.readFile(path, function(err,data) {
             assert(!err, "missing {{package.json}}");
-            var pkg = err?{ name: "meta4demo", version: "0.0.0" }:JSON.parse(data)
+            var pkg = JSON.parse(data)
+            assert(pkg.name, "Missing package name");
             install.install(pkg.name, BOOT_FILE, argv);
             self.announce();
             self.boot(BOOT_FILE, _.extend({},argv,pkg), function(err, config) {
@@ -111,18 +112,23 @@ self.cli = function(cb_features) {
 self.require = function(name, required) {
   try {
       // built-in
-      return require("./feature/"+name);
+      var path ="./feature/"+name;
+      var rkg = require(path);
+      debug("meta4 built-in: %s -> %s", name, path);
+      return rkg;
   }  catch(e) {
       try {
           // meta4 packaged
           var path = process.cwd()+"/node_modules/meta4"+name;
-          // debug("meta4 pkg: %s -> %s", name, path);
-          return require(path);
+          var rkg = require(path);
+          debug("meta4 pkg: %s -> %s", name, path);
+          return rkg;
       }  catch(e) {
           try {
                var path = process.cwd()+"/node_modules/"+name;
+              var rkg = require(path);
               debug("local pkg: %s -> %s", name, path);
-              return require(path);
+              return rkg;
           } catch(e) {
               if (required) {
                   return required(name);
