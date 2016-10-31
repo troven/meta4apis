@@ -4,7 +4,8 @@ var self = module.exports
 // framework packages
 
 var assert	  = require('assert');			// assertions
-var _			 = require('underscore');	  // collections helper
+var _		  = require('underscore');	  // collections helper
+var debug     = require("../debug")("feature:machine");
 
 // =============================================================================
 // meta4 packages
@@ -15,7 +16,7 @@ var helper	  = require('meta4helpers');	// files & mixins
 //
 
 self.install = function(feature, config) {
-//	console.log("install machine", feature)
+//	debug("install machine", feature)
 
 	_.each(feature.config, function(options, name) {
 		// TODO: install node modules directly by name
@@ -101,7 +102,7 @@ self.handle = function (req, res, feature, config, meta4) {
 
 	var result = cmd.exec({
 		error: function (err) {
-			feature.debug && console.log("[meta4machine] ", meta, err)
+			feature.debug && debug("[meta4machine] ", meta, err)
 			return res.json( { id: meta.id, status: 'failed', meta: meta, errors: feature.debug?[err]:err.code} );
 		},
 		success: function (result){

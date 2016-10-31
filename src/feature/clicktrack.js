@@ -6,6 +6,7 @@ var self = module.exports
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
+var debug      = require("../debug")("feature:clicktrack");
 
 // =============================================================================
 // meta4 packages
@@ -34,7 +35,6 @@ self.feature = function(meta4, feature) {
     assert(feature, "{{feature}} is missing")
     assert(feature.path, "{{feature.path}} is missing")
 
-
     // configure ClickTrack
     feature = _.extend({
         path: "/clicktrack",
@@ -48,21 +48,21 @@ self.feature = function(meta4, feature) {
     // Feature Routing
     router.get(feature.path+"/:id", function (req, res, next) {
 
-        var collection = feature.collection || 'clicktracks'
+        var collection = feature.collection || 'clicktracks';
 
-        var data = _.extend({}, req.query, req.params )
-        data.ip = req.ip
+        var data = _.extend({}, req.query, req.params );
+        data.ip = req.ip;
 
-        var crud = factory.models[collection]
-        assert(crud, "{{feature.collection}} is missing: "+collection)
+        var crud = factory.models[collection];
+        assert(crud, "{{feature.collection}} is missing: "+collection);
 
         // find siblings
-        var CRUD = factory.CRUD(crud)
+        var CRUD = factory.CRUD(crud);
         CRUD.create( data, function(results) {
-            var uid = req.signedCookies.clicktrack || uuid.v4()
+            var uid = req.signedCookies.clicktrack || uuid.v4();
             res.cookie('clicktrack', uid, { signed: true });
 
-            console.log("ClickTrack %s -> %j", uid, results)
+            debug("ClickTrack %s -> %j", uid, results);
         })
 
     })

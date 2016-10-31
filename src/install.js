@@ -6,6 +6,7 @@ var self = module.exports
 var fs              = require('fs');             // file system
 var assert          = require('assert');         // assertions
 var paths           = require('path');           // file path helper
+var debug           = require("./debug")("node:install");
 
 // =============================================================================
 
@@ -17,7 +18,7 @@ self.install = function(onInstalled) {
     var args = argv['_']
 
     var pkg = require("../meta4.json")
-//    console.log("Install ", pkg)
+//    debug("Install ", pkg)
 
     // Configure ...
 

@@ -28,8 +28,8 @@ exports.feature = function(meta4, feature) {
 
     // configure API
     feature = _.extend({
-        path: "/api",
-        home: config.home+"/api"
+        path: "/",
+        home: config.home+"/public/"
     }, feature);
 
 

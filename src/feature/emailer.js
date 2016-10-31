@@ -8,6 +8,7 @@ var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var paths      = require('path');           // file path
+var debug      = require("../debug")("feature:emailer");
 
 // =============================================================================
 // meta4 packages
@@ -30,7 +31,7 @@ self.feature = function(meta4, feature) {
 	assert(meta4.router, "feature needs meta4.router");
 	assert(meta4.app, "feature needs meta4.app");
 
-	assert(feature.home, "{{home}} is missing");
+	assert(feature.home, "{{feature.home}} is missing");
     assert(feature.sendgrid, "{{sendgrid}} config is missing");
     assert(feature.sendgrid.apiKey, "{{sendgrid}} API key is missing");
 
@@ -40,7 +41,8 @@ self.feature = function(meta4, feature) {
 
 	var app = meta4.app, router = meta4.router, config = meta4.config;
 	var brand = _.extend({ name: config.name, description: config.description || "", path: config.basePath }, feature.brand);
-	var templateHome = feature.home;
+	var templateHome = feature.home || "./templates/server/email";
+
 	var DEBUG = feature.debug || true;
 
     var sendgrid  = require('sendgrid')(feature.sendgrid.apiKey);
@@ -54,10 +56,10 @@ self.feature = function(meta4, feature) {
 
         sendgrid.send(msg, function(err, result) {
             if (err) {
-                console.log("Email Failed (%s) - to: %s", err, msg.to);
+                debug("Email Failed (%s) - to: %s", err, msg.to);
                 res.status(500).send("SendGrid failed: "+err);
             } else {
-                console.log("Email Sent - to "+msg.to);
+                debug("Email Sent - to "+msg.to);
                 res.json( { model: msg, meta: {}, status: result.message } )
             }
         })
@@ -87,7 +89,7 @@ self.feature = function(meta4, feature) {
 		res.json( { model: model, meta: {} } )
 	});
 
-	DEBUG && console.log("[meta4] Emailer: "+feature.path+" @ ",templateHome);
+	debug("%s @ %s", feature.path, templateHome);
 
     return _.extend(feature, {
         send: sendgrid.send

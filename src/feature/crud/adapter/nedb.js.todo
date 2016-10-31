@@ -23,8 +23,8 @@ exports.handle = function(req, res, meta, meta4) {
 
     assert(config.path, "{{nedb.path}} is missing")
 
-    console.log(req.method, "query:", req.query, "params:", req.params)
-    console.log("nedb path:", config.path)
+    debug(req.method, "query:", req.query, "params:", req.params)
+    debug("nedb path:", config.path)
 
     var db = new nedb({ filename: config.path+".nedb", autoload: true });
 
@@ -33,16 +33,16 @@ exports.handle = function(req, res, meta, meta4) {
 
         // CREATE
         case 'POST':
-console.log("POST:", typeof (req.body), _.isObject(req.body.json))
+debug("POST:", typeof (req.body), _.isObject(req.body.json))
             db.insert(req.body.json)
             break;
 
         // READ
         case 'GET':
-console.log("GET query:", req.query, req.parts)
+debug("GET query:", req.query, req.parts)
 
               db.find({}, function(err, items) {
-console.log("FOUND: ", err, items)
+debug("FOUND: ", err, items)
                 err ? sendError(res, 500, "READ failed: "+e) : res.json( { data: items })
               })
             break;

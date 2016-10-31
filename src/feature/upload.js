@@ -8,6 +8,7 @@ var path       = require('path');           // file path helper
 var assert     = require('assert');         // assertions
 var multer     = require('multer');         // multi-part form handler
 var _          = require('underscore');     // collections helper
+var debug      = require("../debug")("feature:upload");
 
 // =============================================================================
 // meta4 packages
@@ -56,9 +57,13 @@ self.feature = function(meta4, feature) {
 // Handle Uploads
 
 self.uploader = function(feature, meta4) {
+    // Sanity Checks
+    assert(meta4,       "feature missing {{meta4}}")
+    assert(feature,"feature missing {{feature}}")
+    assert(feature.path,"feature missing {{feature.path}}")
 
     var uploadDir = feature.home
-    console.log("[meta4] Upload Attached: %s -> %s", feature.path, uploadDir)
+    debug("Upload Attached: %s -> %s", feature.path, uploadDir)
     helper.files.mkdirs(uploadDir)
 
     return function(req, res, next) {
@@ -82,13 +87,13 @@ self.uploader = function(feature, meta4) {
 	            helper.files.mkdirs(uploadDir+"/"+renamed)
 	            renamed = renamed + (req.query.collection?Date.now()+"/":"") + filename
 
-	            console.log("Rename using", req.query, filename, renamed)
+	            debug("Rename using", req.query, filename, renamed)
 
 	            return renamed
             },
 
             onFileUploadStart: function (file, req, res) {
-                console.log("Uploading:", file.originalname, path.dirname(file.path))
+                debug("Uploading:", file.originalname, path.dirname(file.path))
                 helper.files.mkdirs(path.dirname(file.path))
             },
 
@@ -99,16 +104,16 @@ self.uploader = function(feature, meta4) {
                 delete file.buffer;     // don't round-trip
 
 	            file.id = file.id || file.name
-                file.url = (feature.baseURL?feature.baseURL:feature.path+"/") + file.id
+                file.url = ((feature.basePath?feature.basePath:feature.path) + file.id)+"/";
 	            file.label =  file.name = file.originalname || file.name
 
-	            console.log("[meta4] Uploaded:", feature.path, file, req.query)
+	            debug("Uploaded:", feature.path, file, req.query)
 //	            helper.files.mkdirs(path.basename(file))
 
                 var uploaded = _.pick(file, 'id', 'name', 'url', 'label', "size", "mimetype", "extension")
 
                 if (req.query.collection) {
-                    console.log("Upload CRUD", req.query)
+                    debug("Upload CRUD", req.query)
 
 	                var uploads = crud.models[req.query.collection]
 	                if (uploads) {
@@ -128,7 +133,7 @@ self.uploader = function(feature, meta4) {
             },
 
             onParseEnd: function(req, next) {
-console.log("[meta4] Upload Complete:", req.query, req.body)
+debug("Upload Complete:", req.query, req.body)
                 next()
             }
 
@@ -141,11 +146,11 @@ console.log("[meta4] Upload Complete:", req.query, req.body)
 self.downloader = function(feature, meta4) {
 
     var uploadDir = feature.home
-    console.log("[meta4] Download attached: ", uploadDir, "@", feature.path+"/*")
+    debug("Download attached: ", uploadDir, "@", feature.path+"/*")
 
     return function(req, res, next) {
         var filename = path.resolve(uploadDir+decodeURI(req.path).substring(feature.path.length))
-console.log("[meta4] Download:", filename)
+debug("Download:", filename)
 
 	    // vent our intentions
 	    meta4.vents.emit(feature.id, 'download', filename, req.user);

@@ -6,7 +6,7 @@ var self = module.exports
 var fs         = require('fs');             // file system
 var assert     = require('assert');         // assertions
 var _          = require('underscore');     // collections helper
-
+var debug      = require("../debug")("feature:brand");
 
 // =============================================================================
 // meta4 packages
@@ -38,12 +38,13 @@ self.feature = function(meta4, feature) {
 
 	var router = meta4.router, config = meta4.config
 
-	self.installed = true
+	self.installed = true;
 
 	// Feature Routing
 	router.get("/*", function (req, res, next) {
-		req.brand = _.extend({}, feature)
-		next && next()
+		req.brand = _.extend({}, feature);
+		next && next();
 	})
 
+    debug("installed");
 }

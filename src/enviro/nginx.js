@@ -6,6 +6,7 @@ var exports = module.exports
 var fs              = require('fs');             // file system
 var assert          = require('assert');         // assertions
 var paths           = require('path');           // file path helper
+var debug           = require("../debug")("node:nginx");
 
 // =============================================================================
 
@@ -17,7 +18,7 @@ exports.install = function(meta4, filename) {
     assert(filename, "Missing {{filename}}")
 
     var conf = fs.readSync("./nginx.txt")
-console.log("NGINX: "+conf)
+debug("NGINX: "+conf)
 
     return _defaults
 }

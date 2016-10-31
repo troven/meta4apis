@@ -6,6 +6,7 @@ var self = module.exports
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
+var debug      = require("../debug")("feature:example");
 
 
 // =============================================================================

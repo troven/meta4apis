@@ -6,6 +6,7 @@ var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var paths      = require('path');           // file path helper
 var express    = require('express');        // call express
+var debug      = require("./debug")("node:features");
 
 // =============================================================================
 // meta4 packages
@@ -38,19 +39,20 @@ self.register = function(key, options) {
 
     feature.can = _.extend( { read: true }, feature.can);
     feature.package = feature.package || feature.id;
-    feature.requires = feature.requires || './feature/'+feature.package;
+    feature.requires = feature.requires || feature.package;
 
     if (feature.home) {
         helpers.files.mkdirs(feature.home);
+        debug("create %s folder: %s", feature.id, feature.home);
     }
 
-console.log("Registered: %s -> %j", feature.id, feature);
+debug("Registered: (%s) %s -> %j", feature.id, feature.package, feature.requires);
     return feature;
 };
 
 
 self.registerAll = function(features) {
-    if(!features) return false;
+    if(!features) return self.all();
 
     _.each(features, function(feature, key) {
         self.register( feature.id || key, feature );
@@ -74,7 +76,7 @@ self.all = function() {
  */
 self.configure = function(meta4) {
 
-	var router = meta4.router, config = meta4.config
+	var router = meta4.router, config = meta4.config;
     assert(config.home, "Feature.configure is missing {{home}}")
 
     if (!self.__features) throw new Error("No Features to configure")
@@ -82,8 +84,8 @@ self.configure = function(meta4) {
     // merge feature with runtime options
     _.each(config.features, function(options, key) {
         options.id = options.id || key;
-console.log("User Configured: %s", options.id)
-        _.extend(self.__features[options.id], options);
+        debug("register: %s", options.id)
+        self.register(options.id, options );
     })
 
     // force minimal defaults
@@ -91,7 +93,7 @@ console.log("User Configured: %s", options.id)
         options.id = options.id || key;
         options.order = options.order?options.order:100;
         options.basePath = config.basePath + options.path
-    });
+    });2
 
     // match longest (most specific) paths first
     var sorted = _.sortBy( _.values(self.__features) , function(a) { return a.order })
@@ -107,10 +109,10 @@ console.log("User Configured: %s", options.id)
     _.each( sorted, function(options ) {
         var configured = self._configureFeature(meta4, options)
         if (!configured) {
-            console.log("Not Configured: %s", options.id)
+            debug("%s has no installed options", options.id)
         } else {
             _.extend(self.__features[options.id], configured);
-//            console.log("config feature: %s %j\n%j", options.id, configured, _.keys(configured.fn))
+//            debug("config feature: %s %j\n%j", options.id, configured, _.keys(configured.fn))
         }
     });
 
@@ -125,18 +127,23 @@ console.log("User Configured: %s", options.id)
  * @private
  */
 self._configureFeature = function(meta4, options) {
-	if (!options || options.fn) return false;
+    assert(meta4, "Missing meta core");
+    assert(meta4.require, "Invalid meta4 core");
+    if (!options) return false;
 
     if (options.disabled) {
-        console.log("[meta4] disabled: %s %s %s", options.id, options.package, options.disabled );
+        debug("disabled: %s %s %s", options.id, options.package, options.disabled );
         return;
     }
 
+//    assert(options.fn, "Missing fn()");
+
     // if static function is declared, use it - otherwise defer loading to require()
 
-    var pkg = options.requires
-    console.log("CONFIG: %s %s %s", options.id, pkg);
-    var fn   = _.isFunction(options.feature)?options: require( pkg );
+    var pkg = options.requires;
+
+    debug("configure: %s %s", options.id, pkg);
+    var fn   = _.isFunction(options.feature)?options: meta4.require( pkg );
 
     if (fn.feature) {
 
@@ -144,31 +151,34 @@ self._configureFeature = function(meta4, options) {
 
         if (fn.install && !fn.options) {
 	        fn.options = _.extend({}, options, fn.install(options, meta4.config));
-//DEBUG &&
-console.log("[meta4] installed: %s -> %j", options.id, options)
+debug("installed: %s -> %j", options.id, options)
         } else {
-console.log("[meta4] feature: %s -> %j", options.id, options)
+debug("feature: %s -> %j", options.id, options)
         }
 
 	    // configure feature ... attach routers / request handlers
         try {
-
             var public_fn = fn.feature(meta4, options) || fn;
             options._isConfigured = true;
             options.fn = public_fn
+            debug("features: %s %s", options.id, options._isConfigured);
             return options;
         } catch(e) {
-DEBUG && console.log("Feature Failed", options.package, e);
+debug("Feature Failed", options.package, e);
 	        throw e
         }
+
     } else {
-DEBUG && console.warn("skip feature: ", options.id, "@", pkg)
+console.warn("skip feature: ", options.id, "@", pkg)
         return options;
     }
 };
 
 self.teardown = function(options) {
-    var fn   = self.__features[options.package] || require(options.requires);
+    debug("teardown: %j", options);
+    if (!options) return;
+
+    var fn   = self.__features[options.package] || (options.requires?require(options.requires):false);
     if (fn.feature && fn.teardown) {
         fn.teardown(options)
     }

@@ -7,6 +7,7 @@ var express    = require('express');        // call express
 var assert     = require('assert');         // assertions
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
+var debug      = require("../debug")("feature:crud");
 
 // =============================================================================
 // meta4 packages
@@ -50,7 +51,7 @@ self.feature = function(meta4, feature) {
 
 	// prevent multiple init calls
 	if (self.models) {
-		console.log("Skip re-init CRUD")
+		debug("Skip re-init CRUD")
 		return
 	}
 	self.models = helper.mvc.reload.models(feature.home, feature)
@@ -64,7 +65,7 @@ self.feature = function(meta4, feature) {
         var feature_upload = _.extend( {}, require('../features').get('upload'), feature.upload )
 
         var path = feature.path+'/:collection/_upload_'
-        console.log("[crud] upload: %s %j", path, feature.can )
+        debug("upload: %s %j", path, feature.can )
         router.use(path, upload.uploader( feature_upload, meta4) )
 
         if (feature.can.download) {
@@ -80,7 +81,7 @@ self.feature = function(meta4, feature) {
     _.each(self.models, modelDefaults)
 
 	self.install(feature, function(err) {
-		console.log("CRUD installed", err)
+		debug("CRUD installed", err)
 	})
 
     if (feature.can.install) {
@@ -124,7 +125,7 @@ self.feature = function(meta4, feature) {
             action = id;
         }
 
-        console.log("GET: %j -> %j", req.query, req.body)
+        debug("GET: %j -> %j", req.query, req.body)
         // unified command meta-data by merging Form fields (POST) & query params (GET)
         var cmd = _.extend({}, req.query, req.body);
 
@@ -143,7 +144,7 @@ self.feature = function(meta4, feature) {
 
         var renderResult = function (result) {
 
-            console.log("[crud] %s %j -> (%s rows)", feature.path, cmd, result.data.length)
+            debug("result %s %j -> (%s rows)", feature.path, cmd, result.data.length)
 
             // vent our intentions
             meta4.vents.emit(feature.id, req.user || false, cmd, result.data || false);
@@ -214,7 +215,7 @@ self.CRUD = function(crud, user) {
 	var adapter = require( crud.requires || "./crud/adapter/"+(crud.store || crud.adapter.type) )
 
 	// send error
-	if (!adapter) throw new Error("[crud] missing adapter: "+requires);
+	if (!adapter) throw new Error("missing adapter: "+requires);
 
 	// Switchback encapsulates a raw Adapter
     // call before / after functions
@@ -248,9 +249,9 @@ self.CRUD = function(crud, user) {
 		},
 		find  : function (model, cb) {
             model = self.before.find(model, crud, user);
-console.log("Find: %j %j", model, crud, _.keys(adapter) )
+debug("Find: %j %j", model, crud, _.keys(adapter) )
             var found = adapter.find ? adapter.find(crud, model, cb) : {};
-//console.log("Found: %s -> %j", crud.id, found)
+//debug("Found: %s -> %j", crud.id, found)
 //			self.after.find(found.data, crud, user);
             return found
         },
@@ -334,7 +335,7 @@ self.after = {
 
 }
 self.teardown = function(options) {
-	console.log("\tclean-up: "+options.package)
+	debug("\tclean-up: "+options.package)
 	_.each(self._db, function(db) {
         // NOP
 	})

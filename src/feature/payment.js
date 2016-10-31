@@ -6,6 +6,7 @@ var self = module.exports
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
+var debug      = require("../debug")("feature:payment");
 
 
 // =============================================================================
@@ -64,7 +65,7 @@ self.feature = function(meta4, feature) {
 
 		stripe.accounts.retrieve( feature.provider.stripe.accountId,
 			function(err, account) {
-console.log("Owner Account: ",err ,account)
+debug("Owner Account: ",err ,account)
 				Reply(res, err, account)
 			}
 		);
@@ -78,7 +79,7 @@ console.log("Owner Account: ",err ,account)
 		if (custId) {
 			stripe.invoices.list( custId,
 				function(err, invoices) {
-					console.log("Invoices: ",custId, err ,invoices)
+					debug("Invoices: ",custId, err ,invoices)
 					Reply(res, err, invoices)
 				}
 			);
@@ -86,7 +87,7 @@ console.log("Owner Account: ",err ,account)
 		}
 
 		stripe.invoices.list( function(err, invoices) {
-				console.log("Invoices: ",err ,invoices)
+				debug("Invoices: ",err ,invoices)
 				Reply(res, err, invoices)
 			}
 		);
@@ -104,7 +105,7 @@ console.log("Owner Account: ",err ,account)
 
 		var cmd = _.extend({}, req.query, req.body )
 
-		console.log("Client Connected", cmd)
+		debug("Client Connected", cmd)
 
 //      vent our intentions
 		meta4.vents.emit(feature.id+":connected", req.user||false, cmd);
@@ -118,7 +119,7 @@ console.log("Owner Account: ",err ,account)
 
 		var cmd = _.extend({}, req.query, req.body )
 
-		console.log("Stripe Webhook", cmd)
+		debug("Stripe Webhook", cmd)
 		//TODO: active confirmation
 
 //      vent our intentions
@@ -134,7 +135,7 @@ console.log("Owner Account: ",err ,account)
 		assert(req.body.plan, "missing plan")
 		assert(req.body.redirect, "missing redirect")
 		if (!req.user) {
-console.log("Not Logined")
+debug("Not Logined")
 			req.login()
 			return;
 		}
@@ -147,7 +148,7 @@ console.log("Not Logined")
 			var cmd = {plan: req.body.plan }
 			stripe.customers.createSubscription( customer.stripe_id, cmd,
 				function(err, result) {
-console.log("New Subscriber", customer, result )
+debug("New Subscriber", customer, result )
 
 					// vent our intentions
 					meta4.vents.emit(feature.id+":subscriber", req.user||false, cmd, result.data||false);
@@ -166,7 +167,7 @@ console.log("New Subscriber", customer, result )
 				source: req.body.stripeToken
 			}, function(err, customer) {
 
-console.log("New Customer", req.body, customer )
+debug("New Customer", req.body, customer )
 				req.user.stripe_id = customer.id
 
 				// vent our intentions

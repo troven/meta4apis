@@ -4,6 +4,7 @@
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var helper     = require('meta4helpers');   // files & mixins
+var debug      = require("../../../debug")("crud:orientdb");
 
 // =============================================================================
 // Feature Packages
@@ -27,7 +28,7 @@ var acquireDatabase = function(crud, cb) {
 	var server = exports._db[crud.id]
 	if (server) {
 		var db = server.use(crud.adapter.database.name)
-DEBUG && console.log("cachedDatabase", crud.id, crud.adapter.database.name )
+debug("cachedDatabase", crud.id, crud.adapter.database.name )
 		cb && cb(null, db)
 		return
 	}
@@ -43,7 +44,7 @@ DEBUG && console.log("cachedDatabase", crud.id, crud.adapter.database.name )
 
 	var db = exports.__server.use(crud.adapter.database.name)
 
-//DEBUG && console.log("acquireDatabase", crud.id, crud.adapter.database.name)
+//debug("acquireDatabase", crud.id, crud.adapter.database.name)
 
 	cb && cb(null, db)
     return db;
@@ -60,22 +61,22 @@ exports.install = function(crud, cb) {
 		}
 		var classname = crud.collection || crud.id
 
-DEBUG && console.log("[orientdb] install:", classname)
+debug("[orientdb] install:", classname)
 
 		db.class.get(classname).then(function() {
 
 			exports.close(db);
 //DEBUG &&
-console.log('[orient] class: ', classname);
+debug('[orient] class: ', classname);
 
 		}).catch(function () {
 
 			db.class.create(classname).then(function (myClass) {
-console.log('[orientdb] Created class: ', classname, myClass);
+debug('[orientdb] Created class: ', classname, myClass);
 				cb && cb( { status: "success", class: myClass })
 				exports.close(db);
 			}).catch(function() {
-DEBUG && console.log('[orientdb] Failed to create class: ', classname, arguments);
+debug('[orientdb] Failed to create class: ', classname, arguments);
 				exports.close(db);
 			});
 		});
@@ -83,7 +84,7 @@ DEBUG && console.log('[orientdb] Failed to create class: ', classname, arguments
 }
 
 exports.close = function(db) {
-	DEBUG && console.log("Close ODB:", db.name, db.sessionId);
+	debug("Close ODB:", db.name, db.sessionId);
 }
 // =============================================================================
 // Create
@@ -100,7 +101,7 @@ exports.create = function(crud, data, cb) {
 		db.insert().into(crud.id).set(data).one().then(function(model) {
 			// we're done
 			cb && cb({ status: "success", data: model, meta: { schema: crud.schema, count: 1 } })
-DEBUG && console.log("[orientdb] created:",crud.id, model)
+debug("[orientdb] created:",crud.id, model)
 			exports.close(db);
 		});
 	});
@@ -118,7 +119,7 @@ exports.read = function(crud, meta, cb) {
 			return false
 		}
 
-DEBUG && console.log("[orientdb] read:",crud.id)
+debug("[orientdb] read:",crud.id)
 
 		// TODO: implement 'meta' to instantiate a 'filter'
 		db.class.get(crud.id).then(function (oClass) {
@@ -146,7 +147,7 @@ exports.update = function(crud, data, cb) {
 		var filter = {}
 		filter[crud.idAttribute] = data[crud.idAttribute]
 
-DEBUG && console.log("[orientdb] update:", crud.id, data, filter)
+debug("[orientdb] update:", crud.id, data, filter)
 
 		db.update(crud.id).set(data).where( filter ).scalar().then(function (total) {
 			cb && cb( { status: "success", data: data, meta: { filter: filter, count: total } });
@@ -170,7 +171,7 @@ exports.delete = function(crud, data, cb) {
 		var filter = {}
 		filter[crud.idAttribute] = data[crud.idAttribute]
 
-DEBUG && console.log("[orientdb] delete:", crud.id, data, filter)
+debug("[orientdb] delete:", crud.id, data, filter)
 
 		db.delete().from(crud.id).where( filter ).limit(1).scalar().then(function (total) {
 			cb && cb( { status: "success", data: data, meta: { filter: filter, count: total} });
@@ -202,11 +203,11 @@ exports.find = function(crud, data, cb) {
 		if (!where) where = crud.idAttribute+"=:"+crud.idAttribute;
 
 		var query = "SELECT * FROM "+crud.id+ " WHERE "+where
-DEBUG && console.log("[orientdb] find:",crud.id, query, data)
+debug("[orientdb] find:",crud.id, query, data)
 
 		return db.query(query, {params: data }).then(function (results) {
 //			DEBUG &&
-console.log("[orient] Found: %j %s %j",crud, where, results)
+debug("[orient] Found: %j %s %j",crud, where, results)
 			var meta = { filter: data, count: results.length }
 			cb && cb( { status: "success", data: results[0] || {} , meta: meta });
 			exports.close(db);
@@ -231,7 +232,7 @@ exports.query = function(crud, queryName, data, cb) {
 		}
 
 		var query = crud.queries[queryName]
-DEBUG && console.log("[orientdb] query:",crud.id, queryName, query, data)
+debug("[orientdb] query:",crud.id, queryName, query, data)
 		if (!query) {
 			cb && cb( { status: "failed", message: "unknown query "+queryName});
 			exports.close(db);

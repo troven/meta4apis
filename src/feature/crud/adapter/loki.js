@@ -4,6 +4,7 @@
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var helper     = require('meta4helpers');   // files & mixins
+var debug      = require("../../../debug")("crud:loki");
 
 // =============================================================================
 // Feature Packages
@@ -33,7 +34,7 @@ var getCollection = function(crud, db) {
 
 var acquireDatabase = function(crud, cb) {
 
-	DEBUG && console.log("CRUD:loki", crud.id)
+	debug("CRUD:loki", crud.id)
 	assert(crud.home, "CRUD Loki required a home")
 
 	// underlying database
@@ -72,14 +73,14 @@ exports.create = function(crud, data, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] create:",crud.id, data)
+		debug("[loki] create:",crud.id, data)
 
 		var collection = db.getCollection(crud, db)
 		var found = collection.insert(data)
 
 		// externalize ID attribute
 		data[crud.idAttribute] = data["$loki"]
-		DEBUG && console.log("[loki] created:",crud.id, found)
+		debug("[loki] created:",crud.id, found)
 
 		// we're done
 		cb && cb({ status: "success", data: data, meta: {  } })
@@ -100,11 +101,11 @@ exports.read = function(crud, data, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] read:",crud.id, data )
+		debug("[loki] read:",crud.id, data )
 
 		var collection = db.getCollection(crud, db)
 		var found = collection.find(data)
-		DEBUG && console.log("[loki] found:", crud.id, found)
+		debug("[loki] found:", crud.id, found)
 
 		// we're done
 		cb && cb( { status: "success", data: found, meta: { filter: data, count: found.length } });
@@ -123,11 +124,11 @@ exports.update = function(crud, data, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] update:", crud.id, data)
+		debug("[loki] update:", crud.id, data)
 
 		var collection = db.getCollection(crud, db)
 		var found = collection.update(data)
-		DEBUG && console.log("[loki] updated:", crud.id, data, found)
+		debug("[loki] updated:", crud.id, data, found)
 
 		// we're done
 		cb && cb( { status: "success", data: data, meta: { count: found } });
@@ -146,11 +147,11 @@ exports.delete = function(crud, data, cb) {
 			return false
 		}
 
-		DEBUG && console.log("[loki] delete:", crud.id, data)
+		debug("[loki] delete:", crud.id, data)
 
 		var collection = db.getCollection(crud, db)
 		var found = collection.removeWhere(data)
-		DEBUG && console.log("[loki] deleted:",crud.id, found)
+		debug("[loki] deleted:",crud.id, found)
 
 		// we're done
 		cb & cb( { status: "success", data: data, meta: { count: found } });

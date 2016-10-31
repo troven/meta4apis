@@ -6,6 +6,7 @@ var self = module.exports
 var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
+var debug      = require("../debug")("feature:sitemap");
 
 
 // =============================================================================
@@ -41,7 +42,7 @@ self.feature = function(meta4, feature) {
 	router.get("/*", function (req, res, next) {
 		var tox = req.url.split("/")
 
-//console.log("SiteMap", tox, feature)
+//debug("SiteMap", tox, feature)
 		var sitepath = feature
 		var last = false
 		_.each(tox, function(v,k) {
@@ -56,7 +57,7 @@ self.feature = function(meta4, feature) {
 		})
 		req.sitepath = sitepath
 		req.sitemap = feature
-//console.log("SitePath", req.url, sitepath);
+//debug("SitePath", req.url, sitepath);
 
 		next && next()
 	})

@@ -19,6 +19,8 @@ var fs         = require('fs');             // file system
 var paths      = require('path');           // file path helper
 var _          = require('underscore');     // collections helper
 var __         = require('underscore-deep-extend');
+var debug      = require("./debug")("node:server");
+var Emitter    = require('events').EventEmitter;
 
 // =============================================================================
 // meta4 packages
@@ -41,8 +43,7 @@ app.use(bodyParser.json());
 // =============================================================================
 // Event-based API
 
-var EventEmitter = require('events').EventEmitter;
-var self = module.exports = new EventEmitter();
+var self = module.exports = new Emitter();
 
 // =============================================================================
 // process command line & boot application
@@ -63,14 +64,14 @@ self.utils = {
 _.mixin( { deepExtend: __(_) } );
 
 self.announce = function() {
-    console.log("                _        _  _\n\
+    debug("                _        _  _\n\
  _ __ ___   ___| |_ __ _| || |\n\
 | '_ ` _ \\ / _ \\ __/ _` | || |_\n\
 | | | | | |  __/ || (_| |__   _|\n\
 |_| |_| |_|\\___|\\__\\__,_|  |_|");
 
     var meta4node_pkg = require('../package.json');
-    console.log("\tv"+meta4node_pkg.version+" by troven\n")
+    console.log("\tv%s by %s\n", meta4node_pkg.version, meta4node_pkg.author)
 
 };
 
@@ -107,6 +108,31 @@ self.cli = function(cb_features) {
     }
 };
 
+self.require = function(name, required) {
+  try {
+      // built-in
+      return require("./feature/"+name);
+  }  catch(e) {
+      try {
+          // meta4 packaged
+          var path = process.cwd()+"/node_modules/meta4"+name;
+          // debug("meta4 pkg: %s -> %s", name, path);
+          return require(path);
+      }  catch(e) {
+          try {
+               var path = process.cwd()+"/node_modules/"+name;
+              debug("local pkg: %s -> %s", name, path);
+              return require(path);
+          } catch(e) {
+              if (required) {
+                  return required(name);
+              }
+              throw new Error(e);
+          }
+      }
+  }
+};
+
 self.boot = function(filename, options, callback) {
 
     // read meta4 boot file
@@ -117,7 +143,7 @@ self.boot = function(filename, options, callback) {
 
 	    // merge with runtime options
         self._config = _.extend(config, options);
-	    console.log("[meta4] booting :", paths.normalize(filename));
+	    debug("booting : %s", paths.normalize(filename));
 	    callback && callback(null, self._config)
     });
 };
@@ -156,7 +182,7 @@ self.start = function(config, callback) {
     assert(config.name, "Missing {{name}}");
     assert(config.port, "Missing {{port}}");
 
-    console.log("[meta4] home dir:", config.home);
+    debug("home dir: %s", config.home);
 
     // boot configuration
     var SESSION_SECRET = config.salt || config.name+"_"+new Date().getTime();
@@ -168,12 +194,10 @@ self.start = function(config, callback) {
     // environmentally friendly
     process.title = config.name + " on port "+config.port;
 	process.on( 'SIGINT', function() {
-		console.log("\n[meta4] terminated by user ... au revoir" );
+		debug("\n[meta4] terminated by user ... au revoir" );
 		self.shutdown(config);
 	});
-
-    // get an instance of the express Router
-    var router = express.Router();
+    debug("sigint registered");
 
 	// Cookies
 	app.use( cookies(SESSION_SECRET) );
@@ -183,13 +207,13 @@ self.start = function(config, callback) {
 	app.use(bodyParser.json());
 
 	// Sessions
-	app.use(session({
+	app.use(session(_.extend({
 		secret: SESSION_SECRET,
 		name: "meta4"+config.name,
 		proxy: true,
 		resave: true,
 		saveUninitialized: true
-	}));
+	},config.session)));
 
 	// Useful Upgrades
 	app.use(require('flash')());
@@ -198,29 +222,35 @@ self.start = function(config, callback) {
 //    app.use( require("compress")() );
 //	  app.use( express.favicon(config.brand.favicon || "./src/public/brand/favicon.png") )
 
-	// configure Express Router
+    // get an instance of the express Router
+    var router = express.Router();
+
+    // configure Express Router
 	app.use(config.basePath, router);
 
-	// configure meta4 features
-    var meta4 = { app: app, router: router, io: io, config: config, vents: self, features: self.features }
+    debug("router: %s", config.basePath);
+
+    // configure meta4 features
+    var meta4 = { app: app, router: router, io: io, config: config, vents: self, features: self.features, require: self.require };
 
     // register deferred plugins - they need an initialised meta4 config
     _.each(self.__plugins, function(plugin) {
         var options = plugin.fn(meta4);
+
         if (!options || !options.features) throw "Plugin returned no features"
         features.registerAll( options.features );
     })
-    console.log("Registered Plugins ...")
+    debug("registered plugins ...");
 
     features.configure(meta4);
-    console.log("Configured Features ...")
+    debug("configured features ...");
 
 	// start HTTP server
     httpd.listen(config.port, function() {
         // we're good to go ...
-        console.log("[meta4] ----------------------------------------");
-        console.log("[meta4] NodeJS  :", process.version, "("+process.platform+")");
-        console.log("[meta4] module  :", config.name, "v"+config.version || "0.0.0");
+        console.log("----------------------------------------");
+        console.log("NodeJS  :", process.version, "("+process.platform+")");
+        console.log("module  :", config.name, "v"+config.version || "0.0.0");
         console.log('[meta4] login ->: http://' + config.url, "\n");
 
 	    self.emit("start", config);
@@ -229,7 +259,7 @@ self.start = function(config, callback) {
 
 	// TODO: fix client-side bug
 //    io.on('connection', function (socket) {
-//        console.log("[meta4] socket io")
+//        debug("socket io")
 //        socket.emit("hello");
 //
 //        setInterval(function() {
@@ -247,5 +277,5 @@ self.shutdown = function(config) {
 
 	self.emit("shutdown", config);
 
-	process.exit();
+	process.exit(0);
 };

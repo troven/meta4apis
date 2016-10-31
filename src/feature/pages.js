@@ -8,6 +8,7 @@ var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var paths      = require('path');           // file path
+var debug      = require("../debug")("feature:pages");
 
 // =============================================================================
 // meta4 packages
@@ -15,6 +16,7 @@ var paths      = require('path');           // file path
 var helper     = require('meta4helpers');   // files & mixins
 var features   = require('../features');
 var factory    = require("./crud")
+var debug      = require("../debug")("feature:pages");
 
 // =============================================================================
 
@@ -78,7 +80,7 @@ self.feature = function(meta4, feature) {
 
 		// no matching collection
 		if (!crud) {
-DEBUG&&console.log("Brand Page", page, collection)
+debug("Brand Page", page, collection)
 			res.render(page, model)
 			return;
 		}
@@ -103,8 +105,7 @@ DEBUG&&console.log("Brand Page", page, collection)
 
 				// render page + model
 				try {
-//DEBUG&&
-console.log("Model Page", page, collection, model, req.sitepath)
+debug("Model Page", page, collection, model, req.sitepath)
 					res.render(page, model)
 				} catch(e) {
 					res.send(404, "missing "+page)

@@ -7,6 +7,7 @@ var _               = require('underscore');     // collections helper
 var express         = require('express');        // call express
 var passport        = require('passport')
 var assert          = require('assert');         // assertions
+var debug           = require("../debug")("feature:auth");
 
 // =============================================================================
 // meta4 packages
@@ -44,7 +45,7 @@ self.feature = function(meta4, feature) {
 	var DEBUG = feature.debug || false
 
 	if (self._isInstalled) {
-		console.log("Skip re-init AUTH")
+		debug("Skip re-init AUTH")
 		return
 	}
 	self._isInstalled = true
@@ -64,7 +65,7 @@ self.feature = function(meta4, feature) {
         }
     }, feature);
 
-    console.log("Auth Paths: %s -> %j", feature.path, feature.paths);
+    debug("Auth Paths: %s -> %j", feature.path, feature.paths);
 
     var basePath = config.basePath
     var failureFlash = false
@@ -75,7 +76,7 @@ self.feature = function(meta4, feature) {
         failureFlash: failureFlash
     }
 
-    DEBUG&&console.log("login paths: %j", redirectOptions)
+    debug("login paths: %j", redirectOptions)
 
     // =============================================================================
 	// Manage session with Passport
@@ -86,7 +87,7 @@ self.feature = function(meta4, feature) {
     router.use(passport.session());
     meta4.app.use(feature.path, router);
 
-    console.log("Authenticate: %s", feature.path)
+    debug("Authenticate: %s", feature.path)
 
 	// CRUD-based Authentication
 
@@ -124,13 +125,13 @@ self.feature = function(meta4, feature) {
 
     function NotLoggedIn(req, res) {
         req.session.redirectTo = req.originalUrl;
-//console.log("NotLoggedIn: %s -> %s", req.session.redirectTo, req.originalUrl)
+//debug("NotLoggedIn: %s -> %s", req.session.redirectTo, req.originalUrl)
         res.redirect(redirectOptions.failureRedirect);
     }
 
     function EnsureAuthenticated(req, res, next) {
         var _isAuthenticated = req.isAuthenticated();
-//console.log("Ensure Auth: %s -> %s", req.path, _isAuthenticated);
+//debug("Ensure Auth: %s -> %s", req.path, _isAuthenticated);
 		if (_isAuthenticated) {
             req.session.redirectTo = false;
             next && next();
@@ -143,7 +144,7 @@ self.feature = function(meta4, feature) {
 
 	function EnsureAuthorized(options, req, res, next) {
 		if (options && options.roles) {
-
+s
 			if (!req.user.roles) {
 				// no user roles - denied
 				res.redirect(redirectOptions.failureRedirect)
@@ -151,7 +152,7 @@ self.feature = function(meta4, feature) {
 			}
 
 			var rolesAllowed = CompareRoles(options.roles, req.user.roles)
-DEBUG&&console.log("auth roles", rolesAllowed, options.roles, req.user.roles)
+debug("auth roles", rolesAllowed, options.roles, req.user.roles)
 
 			if ( !rolesAllowed ) {
 				// no valid roles - denied
@@ -178,7 +179,7 @@ DEBUG&&console.log("auth roles", rolesAllowed, options.roles, req.user.roles)
 
 	/* Handle home GET - if logged-in */
 	router.get(feature.paths.home, function(req, res, next) {
-console.log("HOME")
+debug("HOME")
 		var isLoggedIn = EnsureAuthenticated(req, res);
         if (isLoggedIn) {
             res.render(redirectOptions.successRedirect.substring(1));
@@ -191,10 +192,10 @@ console.log("HOME")
 	router.get(feature.paths.login, function(req, res) {
 
 		if (!req.isAuthenticated()) {
-console.log("LOGIN: %s", redirectOptions.failureRedirect)
+debug("LOGIN: %s", redirectOptions.failureRedirect)
             res.render(redirectOptions.failureRedirect.substring(1), {})
 		} else {
-console.log("LOGGED IN: %s", redirectOptions.successRedirect)
+debug("LOGGED IN: %s", redirectOptions.successRedirect)
 			res.redirect(redirectOptions.successRedirect);
 		}
 	});
@@ -207,7 +208,7 @@ console.log("LOGGED IN: %s", redirectOptions.successRedirect)
 	    meta4.vents.emit(feature.id+":login", req.user);
 
         var redirectTo = req.session.redirectTo || redirectOptions.successRedirect;
-        console.log("LOGIN [post]: %s", redirectTo)
+        debug("LOGIN [post]: %s", redirectTo)
         res.redirect(redirectTo);
     });
 
@@ -218,7 +219,7 @@ console.log("LOGGED IN: %s", redirectOptions.successRedirect)
 		meta4.vents.emit(feature.id, "logout", req.user);
 		meta4.vents.emit(feature.id+":logout", req.user);
 
-        console.log("LOGOUT: %s", redirectOptions.failureRedirect)
+        debug("LOGOUT: %s", redirectOptions.failureRedirect)
 		req.logout();
 		res.redirect(redirectOptions.failureRedirect);
 	});
@@ -227,7 +228,7 @@ console.log("LOGGED IN: %s", redirectOptions.successRedirect)
 
     /* Handle Registration GET */
     router.get(feature.paths.signup, function(req, res) {
-console.log("SIGN-UP")
+debug("SIGN-UP")
         res.redirect(redirectOptions.signupRedirect)
     });
 
@@ -256,14 +257,14 @@ console.log("SIGN-UP")
 
         // only features that have defined 'path' AND 'roles'
         if (!options.roles || !path) {
-            console.log("[meta4auth] Not Protecting: %s -> %j", path, options)
+            debug("[meta4auth] Not Protecting: %s -> %j", path, options)
             return;
         }
 
-        console.log("[meta4auth] Protecting: %s -> %j", path, options)
+        debug("[meta4auth] Protecting: %s -> %j", path, options)
 
         router.use(path, function(req,res,next) {
-            console.log("PROTECTED: %s @ %s -> %j", path, req.path, options.roles);
+            debug("PROTECTED: %s @ %s -> %j", path, req.path, options.roles);
             EnsureAuthenticated(req, res, false) && EnsureAuthorized(options, req, res, next)
         })
     }
@@ -272,5 +273,7 @@ console.log("SIGN-UP")
 
     _.each(meta4.features.all(), ProtectRoute)
 	_.each(feature.protected, ProtectRoute )
+
+    debug("installed");
 
 }
