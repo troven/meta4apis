@@ -6,11 +6,10 @@ var self = module.exports
 var fs              = require('fs');             // file system
 var assert          = require('assert');         // assertions
 var paths           = require('path');           // file path helper
-var debug           = require("./debug")("node:install");
+var debug           = require("./debug")("node:installer");
 
 // =============================================================================
 
-var helper          = require('meta4helpers');   // files & mixins
 //var hb              = require('mustache');
 
 self.install = function(onInstalled) {

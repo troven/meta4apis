@@ -34,7 +34,7 @@ var getCollection = function(crud, db) {
 
 var acquireDatabase = function(crud, cb) {
 
-	debug("CRUD:loki", crud.id)
+	debug("DB: %s -> %j", crud.id, crud)
 	assert(crud.home, "CRUD Loki required a home")
 
 	// underlying database

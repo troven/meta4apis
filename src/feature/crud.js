@@ -33,8 +33,7 @@ self.feature = function(meta4, feature) {
 
     // =============================================================================
 
-	var app = meta4.app, config = meta4.config
-    var router = express.Router();
+	var config = meta4.config, router = meta4.router;
 
     // configure CRUD
     feature = _.extend({
@@ -45,7 +44,8 @@ self.feature = function(meta4, feature) {
     }, feature);
 
 
-    app.use(config.basePath, router)
+    // app.use(config.basePath, router)
+    debug("CRUD @ %s -> %s", config.basePath, feature.path);
 
     // =============================================================================
 
@@ -54,11 +54,11 @@ self.feature = function(meta4, feature) {
 		debug("Skip re-init CRUD")
 		return
 	}
-	self.models = helper.mvc.reload.models(feature.home, feature)
+    self.models = helper.mvc.reload.models(feature.home, feature)
 
     feature.can = _.extend({ download: true, upload: true }, feature.can);
 
-    self.options = feature // TODO: deprecate? -- too much state?
+    self.options = feature; // TODO: deprecate? -- too much state?
 
     if (feature.can.upload) {
         // merge local and global upload configuration
@@ -100,6 +100,7 @@ self.feature = function(meta4, feature) {
             models.push(model);
         })
         var meta = _.pick(feature, ["id", "path"]);
+        debug("ABOUT: %j -> %j", req.query, meta)
 
         res.json({ data: models, meta: meta } );
     });
@@ -182,17 +183,26 @@ self.execute = function(action,  collection, options, cb) {
 }
 
 self.install = function(feature, cb) {
+
 	_.each(self.models, function(crud, id) {
-		var CRUD = self.CRUD(crud);
-		if (!CRUD || !CRUD.install) {
-			return;
-		};
-		CRUD.install(crud, cb);
-        crud.id = crud.id || id
+
+        crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {} }, crud );
+        crud.id = crud.id || id;
+        var adapter = self.options.adapters[crud.adapter.type];
+        assert(adapter, "Missing ("+crud.adapter.type+") Adapter: "+id);
+
+        crud.adapter = _.extend(crud.adapter, adapter);
+        assert(crud.adapter, "Missing CRUD adapter for: "+crud.adapter.type);
+
+        var CRUD = self.CRUD(crud);
+        assert(CRUD, "Missing CRUD: "+crud);
+        assert(CRUD.install, "Missing CRUD install: "+crud);
+
+        CRUD.install(crud, cb);
 
         // ensure we have a namespace for each model
-        self[crud.id] = _.extend({}, self[crud.id])
-//        self[crud.id] = _.extend({}, self[crud.id])
+        assert(!self[crud.id], "CRUD namespace already exists: "+crud.id);
+        self[crud.id] = _.extend({}, self[crud.id]);
 	})
 }
 // =============================================================================
@@ -204,18 +214,17 @@ self.install = function(feature, cb) {
 self.CRUD = function(crud, user) {
 
 	// default CRUD meta-data
-	crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: {}, schema: {}, defaults: {}, filters: {} }, crud )
+	crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {} }, crud );
 
-	if (!crud.isServer && !crud.isRemote) {
-		throw new Error( "model ["+crud.id+"] is client-only" );
-	}
+	assert( (crud.isServer || crud.isRemote), "CRUD model ["+crud.id+"] is client-only" );
+
+	assert(crud.adapter, "Missing CRUD adapter");
+    assert(crud.adapter.type, "Missing CRUD adapter.type");
 
 	// resolve database-specific adapter implementation
 	// crud.store is legacy config
-	var adapter = require( crud.requires || "./crud/adapter/"+(crud.store || crud.adapter.type) )
-
-	// send error
-	if (!adapter) throw new Error("missing adapter: "+requires);
+	var adapter = require( crud.requires || "./crud/adapter/"+(crud.store || crud.adapter.type) );
+    assert(adapter,"missing adapter: "+crud.requires);
 
 	// Switchback encapsulates a raw Adapter
     // call before / after functions
@@ -274,7 +283,8 @@ debug("Find: %j %j", model, crud, _.keys(adapter) )
 			}
 		})
 	}
-	return CRUD
+
+    return CRUD;
 }
 
 self.before = {

@@ -62,7 +62,7 @@ self.registerAll = function(features) {
 };
 
 self.get = function(id) {
-	return self.__features[id]
+	return self.__features[id];
 };
 
 self.all = function() {
@@ -76,7 +76,7 @@ self.all = function() {
  */
 self.configure = function(meta4) {
 
-	var router = meta4.router, config = meta4.config;
+	var config = meta4.config;
     assert(config.home, "Feature.configure is missing {{home}}")
 
     if (!self.__features) throw new Error("No Features to configure")
@@ -84,7 +84,7 @@ self.configure = function(meta4) {
     // merge feature with runtime options
     _.each(config.features, function(options, key) {
         options.id = options.id || key;
-        debug("register: %s", options.id)
+        debug("register: %s", options.id);
         self.register(options.id, options );
     })
 
@@ -107,9 +107,9 @@ self.configure = function(meta4) {
 
     // naively prioritize routes based - shortest paths first
     _.each( sorted, function(options ) {
-        var configured = self._configureFeature(meta4, options)
+        var configured = self._configureFeature(meta4, options);
         if (!configured) {
-            debug("%s has no installed options", options.id)
+            debug("%s has no installed options", options.id);
         } else {
             _.extend(self.__features[options.id], configured);
 //            debug("config feature: %s %j\n%j", options.id, configured, _.keys(configured.fn))
@@ -151,9 +151,9 @@ self._configureFeature = function(meta4, options) {
 
         if (fn.install && !fn.options) {
 	        fn.options = _.extend({}, options, fn.install(options, meta4.config));
-debug("installed: %s -> %j", options.id, options)
+debug("installed: %s -> %s", options.id, options.path)
         } else {
-debug("feature: %s -> %j", options.id, options)
+debug("attached: %s -> %s", options.id, options.path)
         }
 
 	    // configure feature ... attach routers / request handlers
@@ -165,7 +165,7 @@ debug("feature: %s -> %j", options.id, options)
             return options;
         } catch(e) {
 debug("Feature Failed", options.package, e);
-	        throw e
+	        throw e;
         }
 
     } else {
@@ -175,11 +175,13 @@ console.warn("skip feature: ", options.id, "@", pkg)
 };
 
 self.teardown = function(options) {
-    debug("teardown: %j", options);
-    if (!options) return;
+    if (!options) {
+        return;
+    }
 
     var fn   = self.__features[options.package] || (options.requires?require(options.requires):false);
     if (fn.feature && fn.teardown) {
+        debug("teardown: %j", options);
         fn.teardown(options)
     }
 

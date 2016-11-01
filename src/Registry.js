@@ -9,24 +9,28 @@
 var assert     = require('assert');         // assertions
 var _          = require('underscore');     // collections helper
 var debug      = require("./debug")("node:registry");
+var Emitter    = require('events').EventEmitter;
 
 // =============================================================================
 // meta4 packages
 
 // =============================================================================
 
-var self = {
-	_items: {},
+var self = module.exports = new Emitter();
 
-	get: function(k) {
-		return this._items[k]
-	},
+self._items = {};
 
-	register: function(k,v) {
-		if (this._items[k]) throw "meta4:oops:registry:duplicate#"+k
-		this._items[k]=v
-		return this
-	}
-}
+self.get = function(k) {
+    return self._items[k];
+};
 
-module.exports = self
+self.register = function(k,v) {
+    assert(k, "Missing key");
+    assert(v, "Missing value");
+
+    if (self._items[k]) throw "meta4:oops:registry:duplicate#"+k
+
+    self._items[k] = v;
+    debug("register: %s", k);
+    return this
+};

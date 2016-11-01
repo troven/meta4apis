@@ -39,14 +39,11 @@ exports.feature = function(meta4, feature) {
 
     // =============================================================================
 
-//    var router = express();
-//    app.use(config.basePath || "/", router);
-
     var app = meta4.app;
     var config = meta4.config;
     var DEBUG = feature.debug || false;
 
-    var router = meta4.app;
+    var router = meta4.router;
     var assetHome = paths.normalize(feature.home);
 
     //https://github.com/ericf/express-handlebars
