@@ -6,12 +6,12 @@ var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var paths      = require('path');           // file path helper
 var express    = require('express');        // call express
-var debug      = require("./debug")("node:features");
+var debug      = require("./debug")("features");
 
 // =============================================================================
 // meta4 packages
 
-var helpers     = require('meta4helpers');      // utilities
+var helpers     = require('meta4common');      // utilities
 
 // =============================================================================
 // Event-based API
@@ -34,7 +34,7 @@ self.register = function(key, options) {
     var feature = self.__features[options.id] = _.extend({},self.__features[options.id], options);
 
     if (!(feature.path === false)) {
-//    feature.path = feature.path || "/"+feature.id;
+        feature.path = feature.path || "/"+feature.id;
     }
 
     feature.can = _.extend( { read: true }, feature.can);
@@ -43,10 +43,10 @@ self.register = function(key, options) {
 
     if (feature.home) {
         helpers.files.mkdirs(feature.home);
-        debug("create %s folder: %s", feature.id, feature.home);
+        debug("create %s home folder: %s", feature.id, feature.home);
     }
 
-debug("Registered: (%s) %s -> %j", feature.id, feature.package, feature.requires);
+debug("Registered: (%s @ %s) %s -> %j", feature.id, feature.path, feature.package, feature.requires);
     return feature;
 };
 
@@ -78,6 +78,7 @@ self.configure = function(meta4) {
 
 	var config = meta4.config;
     assert(config.home, "Feature.configure is missing {{home}}")
+    assert(config.basePath, "Missing config.basePath");
 
     if (!self.__features) throw new Error("No Features to configure")
 
@@ -92,7 +93,7 @@ self.configure = function(meta4) {
     _.each(self.__features, function(options, key) {
         options.id = options.id || key;
         options.order = options.order?options.order:100;
-        options.basePath = config.basePath + options.path
+        options.basePath = options.basePath || config.basePath + (options.path || options.id );
     });2
 
     // match longest (most specific) paths first
@@ -149,11 +150,8 @@ self._configureFeature = function(meta4, options) {
 
 	    // install feature & cache result as static options i.e. pre-load expensive resources
 
-        if (fn.install && !fn.options) {
-	        fn.options = _.extend({}, options, fn.install(options, meta4.config));
-debug("installed: %s -> %s", options.id, options.path)
-        } else {
-debug("attached: %s -> %s", options.id, options.path)
+        if (fn.install) {
+	        fn.options = _.extend({}, fn.options, options, fn.install(options, meta4.config));
         }
 
 	    // configure feature ... attach routers / request handlers
@@ -161,10 +159,10 @@ debug("attached: %s -> %s", options.id, options.path)
             var public_fn = fn.feature(meta4, options) || fn;
             options._isConfigured = true;
             options.fn = public_fn
-            debug("features: %s %s", options.id, options._isConfigured);
+            debug("features: %s %s @ %s", options.id, options._isConfigured);
             return options;
         } catch(e) {
-debug("Feature Failed", options.package, e);
+debug("%s failed: %s", options.package, e);
 	        throw e;
         }
 

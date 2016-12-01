@@ -8,7 +8,7 @@
 
 var assert     = require('assert');         // assertions
 var _          = require('underscore');     // collections helper
-var debug      = require("./debug")("node:registry");
+var debug      = require("./debug")("registry");
 var Emitter    = require('events').EventEmitter;
 
 // =============================================================================

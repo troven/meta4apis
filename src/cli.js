@@ -1,22 +1,21 @@
-var debug = require("debug");
+var debug = require("./debug")("cli");
 var assert = require("assert");
 var fs = require("fs");
 var _ = require("underscore");
-var installer = require("./installer");
 var BOOT_FILE = "meta4.json"
 
 var self = module.exports = {
     BOOT_FILE: BOOT_FILE,
 
     announce : function() {
-        debug("                _        _  _\n\
+        console.log("                _        _  _\n\
  _ __ ___   ___| |_ __ _| || |\n\
 | '_ ` _ \\ / _ \\ __/ _` | || |_\n\
 | | | | | |  __/ || (_| |__   _|\n\
 |_| |_| |_|\\___|\\__\\__,_|  |_|");
 
-        var meta4node_pkg = require('../package.json');
-        console.log("\tv%s by %s\n", meta4node_pkg.version, meta4node_pkg.author)
+        var this_pkg = require('../package.json');
+        console.log("v%s by %s\n", this_pkg.version, this_pkg.author)
 
     },
 
@@ -30,7 +29,7 @@ var self = module.exports = {
                 assert(!err, "missing {{package.json}}");
                 var pkg = JSON.parse(data)
                 assert(pkg.name, "Missing package name");
-                installer.install(pkg.name, self.BOOT_FILE, argv);
+
                 self.announce();
                 bootable.boot(self.BOOT_FILE, _.extend({},argv,pkg), function(err, config) {
                     if (cb_features) {

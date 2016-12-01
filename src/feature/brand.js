@@ -11,12 +11,18 @@ var debug      = require("../debug")("feature:brand");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 
 // =============================================================================
 
-// Feature packages
-
+/**
+ * Inject the "brand" object into http.request
+ *
+ * @param meta4
+ * @param feature
+ *
+ *
+ */
 
 // =============================================================================
 // configure the API routes
@@ -24,6 +30,7 @@ var helper     = require('meta4helpers');   // files & mixins
 self.feature = function(meta4, feature) {
 
 	// Sanity Checks
+
 	assert(meta4,       "feature missing {{meta4}}")
 	assert(meta4.router,"feature missing {{meta4.router}}")
 	assert(meta4.config,"feature missing {{meta4.config}}")
@@ -40,9 +47,12 @@ self.feature = function(meta4, feature) {
 
 	self.installed = true;
 
-	// Feature Routing
+    var options = _.pick(meta4.config, ["host", "port", "basePath", "protocol", "name"]);
+
+	// inject the {{brand}} feature object into the request
+
 	router.get("/*", function (req, res, next) {
-		req.brand = _.extend({}, feature);
+		req.brand = _.extend({}, options, feature);
 		next && next();
 	})
 

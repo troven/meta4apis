@@ -11,7 +11,7 @@ var fs         = require('fs');             // file system
 var paths      = require('path');           // file path helper
 var _          = require('underscore');     // collections helper
 var __         = require('underscore-deep-extend');
-var debug      = require("./debug")("node:server");
+var debug      = require("./debug")("server");
 var Emitter    = require('events').EventEmitter;
 var hbs         = require('express-handlebars');
 
@@ -19,7 +19,6 @@ var hbs         = require('express-handlebars');
 // meta4 packages
 
 var features    = require('./features');        // features
-var installer   = require('./installer');       // installer
 
 // =============================================================================
 // support POST payloads
@@ -47,35 +46,7 @@ self.utils = {
 
 _.mixin( { deepExtend: __(_) } );
 
-self.require = function(name, required) {
-  try {
-      // built-in
-      var path ="./feature/"+name;
-      var rkg = require(path);
-      debug("meta4 built-in: %s -> %s", name, path);
-      return rkg;
-  }  catch(e) {
-      try {
-          // meta4 packaged
-          var path = process.cwd()+"/node_modules/meta4"+name;
-          var rkg = require(path);
-          debug("meta4 pkg: %s -> %s", name, path);
-          return rkg;
-      }  catch(e) {
-          try {
-               var path = process.cwd()+"/node_modules/"+name;
-              var rkg = require(path);
-              debug("local pkg: %s -> %s", name, path);
-              return rkg;
-          } catch(e) {
-              if (required) {
-                  return required(name);
-              }
-              throw new Error(e);
-          }
-      }
-  }
-};
+self.require = require("./requires");
 
 self.boot = function(filename, options, callback) {
 
@@ -112,7 +83,7 @@ self.plugin = function(featureMachine) {
 };
 
 /**
- * configure and launch the meta4node server
+ * configure and launch the meta4apis server
  * multiple command-line arguments can instantiate virtual hosts
  *
  * @param config        meta4.json object

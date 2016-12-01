@@ -40,7 +40,7 @@ var acquireDatabase = function(crud, cb) {
         port: 2424,
         username: false,
         password: false,
-        pool: { max: 10 },
+        pool: { max: 20 },
         database: { name: false }
     }, crud.adapter );
 
@@ -80,6 +80,7 @@ exports.install = function(crud, cb) {
 
             debug('class: ', classname);
 			exports.close(db);
+            cb && cb( { status: "success", class: myClass })
 
 		}).catch(function () {
 

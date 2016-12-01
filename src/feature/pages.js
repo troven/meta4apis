@@ -13,7 +13,7 @@ var debug      = require("../debug")("feature:pages");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 var features   = require('../features');
 var factory    = require("./crud")
 var debug      = require("../debug")("feature:pages");
@@ -44,7 +44,8 @@ self.feature = function(meta4, feature) {
 
 	var app = meta4.app, config = meta4.config;
 
-    // configure Pages
+    // configure dynamic pages
+
     feature = _.extend({
         path: "/page",
         home: config.home+"/templates/server"
@@ -54,34 +55,51 @@ self.feature = function(meta4, feature) {
     var templateHome = feature.home;
 	var DEBUG = feature.debug || true;
 
-    var router = express();
+    var router = express.Router();
 
 	// =============================================================================
 
 	//https://github.com/ericf/express-handlebars
-	router.engine('.html', hbs({defaultLayout: false, extname: '.html', settings: { views: templateHome } }));
+	app.engine('.html', hbs({defaultLayout: false, extname: '.html',
+        layoutsDir: "layouts", partialsDir: "partials"
+	}));
 
-    router.set('view engine', '.html');
-	router.set('views', templateHome);
-    app.use(config.basePath+feature.path, router)
+    app.set('view engine', '.html');
+    app.set('views', templateHome);
+    app.use(feature.path, router)
+    app.enable('view cache');
 
-	// Dynamic Branded Views
+    debug("pages %s from: %s", feature.path, templateHome);
+
+    var options = _.pick(meta4.config, ["host", "port", "basePath", "protocol", "name"]);
+    var branding = _.extend(options, features.brand);
+
+    // Dynamic Branded Views
+
+    router.get("/:pageName?", function(req, res, next) {
+        var page = req.params.pageName
+        var brand = req.brand || branding;
+
+        debug("render: %s", page);
+        res.render(page, brand );
+    });
 
 	router.get("/:pageType/:id?", function(req, res, next) {
 
 		var id = req.params.id || "index"
 		var page = req.params.pageType
 		var collection = feature.collection || feature.id
+        var brand = req.brand || branding;
 
 		var data = _.extend({}, req.query, req.body, req.params )
-		var model = { meta: data, user: req.user, brand: req.brand }
+		var model = { meta: data, user: req.user, brand: brand }
 
 		var crud = factory.models[collection]
 
 		// no matching collection
 		if (!crud) {
-debug("Brand Page", page, collection)
-			res.render(page, model)
+debug("render: %s <- %s", page, collection);
+			res.render(page, model);
 			return;
 		}
 
@@ -105,7 +123,7 @@ debug("Brand Page", page, collection)
 
 				// render page + model
 				try {
-debug("Model Page", page, collection, model, req.sitepath)
+debug("render: %s <- %s @ %s -> %j", page, collection, req.sitepath, model)
 					res.render(page, model)
 				} catch(e) {
 					res.send(404, "missing "+page)

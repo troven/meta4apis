@@ -3,7 +3,7 @@
 
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 var debug      = require("../../../debug")("crud:loki");
 
 // =============================================================================

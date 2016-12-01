@@ -11,7 +11,7 @@ var debug      = require("../debug")("feature:clicktrack");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 var factory    = require("./crud")
 
 // =============================================================================
@@ -39,7 +39,7 @@ self.feature = function(meta4, feature) {
     feature = _.extend({
         path: "/clicktrack",
         collection: "clicktracks"
-    },feature);
+    }, feature);
 
     // =============================================================================
 

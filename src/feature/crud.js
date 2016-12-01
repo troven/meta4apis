@@ -12,7 +12,7 @@ var debug      = require("../debug")("feature:crud");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 var upload      = require('./upload');        // uploads & attachments
 
 var ID_ATTRIBUTE    = "id"
@@ -31,16 +31,20 @@ self.feature = function(meta4, feature) {
 
     assert(feature, "{{crud}} feature not configured")
 
+    feature.adapters = feature.adapters || { "default": { type: "loki" }};
+    assert(feature.adapters, "{{crud}} adapters not configured")
+
     // =============================================================================
 
 	var config = meta4.config, router = meta4.router;
+    assert(config.home, "Missing config home");
 
     // configure CRUD
     feature = _.extend({
-        path: "/models",
+        path: "models",
         requires: "./feature/crud",
-        home: config.home+"/models/meta",
-        data: config.home+"/models/data",
+        home: config.home+"/models",
+        data: config.home+"/data",
     }, feature);
 
 
@@ -58,7 +62,10 @@ self.feature = function(meta4, feature) {
 
     feature.can = _.extend({ download: true, upload: true }, feature.can);
 
-    self.options = feature; // TODO: deprecate? -- too much state?
+    self.options = _.extend({ adapters: { default: {} }}, feature );
+    self.options.adapters = _.extend({ default: {} }, self.options.adapters );
+
+    debug("OPTIONS: %j", self.options);
 
     if (feature.can.upload) {
         // merge local and global upload configuration

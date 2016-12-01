@@ -12,7 +12,7 @@ var debug      = require("../debug")("feature:sitemap");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 
 // =============================================================================
 
@@ -39,6 +39,7 @@ self.feature = function(meta4, feature) {
 	var router = meta4.router, config = meta4.config
 
 	// Feature Routing
+
 	router.get("/*", function (req, res, next) {
 		var tox = req.url.split("/")
 

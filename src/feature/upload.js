@@ -13,7 +13,7 @@ var debug      = require("../debug")("feature:upload");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 var crud       = require('./crud');           // CRUD
 
 // =============================================================================

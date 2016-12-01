@@ -13,7 +13,7 @@ var debug      = require("../debug")("feature:assets");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 var hbs        = require('express-handlebars');
 
 // =============================================================================
@@ -45,12 +45,6 @@ exports.feature = function(meta4, feature) {
 
     var router = meta4.router;
     var assetHome = paths.normalize(feature.home);
-
-    //https://github.com/ericf/express-handlebars
-    app.engine('.html', hbs({defaultLayout: false, extname: '.html', settings: { views: assetHome } }));
-    app.set('view engine', '.html');
-    app.set('views', assetHome);
-
     debug("%s @ %s", feature.path, assetHome)
 
     // =============================================================================
@@ -63,7 +57,8 @@ exports.feature = function(meta4, feature) {
 //    } );
 
 
-    // embedded static files
+    // embedded static files from assets.home
+
     router.get('/*', function(req,res,next) {
         var file = req.path;
         if (!file || file == "/") file = "/index.html";
@@ -82,10 +77,10 @@ exports.feature = function(meta4, feature) {
             return;
         }
         // illegal path
-        res.sendStatus(403);
+        res.sendStatus(404);
     });
 
-    debug("installed %s @ %s", (config.basePath+"/static"), assetHome)
+    debug("installed %s @ %s", (config.basePath+"/static"), assetHome);
 
 
 }

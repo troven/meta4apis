@@ -12,7 +12,7 @@ var debug      = require("../debug")("feature:payment");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 
 // =============================================================================
 

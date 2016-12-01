@@ -7,7 +7,7 @@ var _               = require('underscore');     // collections helper
 var express         = require('express');        // call express
 var passport        = require('passport')
 var assert          = require('assert');         // assertions
-var debug           = require("../debug")("feature:auth");
+var debug           = require("../debug")("feature:oauth");
 
 // =============================================================================
 // meta4 packages
@@ -19,7 +19,7 @@ var debug           = require("../debug")("feature:auth");
 var LinkedInStrategy    = require('passport-linkedin'),
 	GoogleStrategy      = require('passport-google'),
 	FacebookStrategy    = require('passport-facebook'),
-    LocalStrategy   = require('passport-local').Strategy;
+    LocalStrategy       = require('passport-local').Strategy;
 
 var hbs                 = require('express-handlebars');
 
@@ -65,7 +65,7 @@ self.feature = function(meta4, feature) {
         }
     }, feature);
 
-    debug("Auth Paths: %s -> %j", feature.path, feature.paths);
+    debug("common %s paths: %j", feature.path, feature.paths);
 
     var basePath = config.basePath
     var failureFlash = false
@@ -257,12 +257,11 @@ debug("SIGN-UP")
 
         // only features that have defined 'path' AND 'roles'
         if (!options.roles || !path) {
-            debug("[meta4auth] Not Protecting: %s -> %j", path, options)
+            debug("missing %s roles: %s", key)
             return;
         }
 
-        debug("[meta4auth] Protecting: %s -> %j", path, options)
-
+        debug("protect: %s @ %s", key, path)
         router.use(path, function(req,res,next) {
             debug("PROTECTED: %s @ %s -> %j", path, req.path, options.roles);
             EnsureAuthenticated(req, res, false) && EnsureAuthorized(options, req, res, next)

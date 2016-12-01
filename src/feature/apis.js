@@ -11,7 +11,7 @@ var debug      = require("../debug")("feature:apis");
 // =============================================================================
 // meta4 packages
 
-var helper     = require('meta4helpers');   // files & mixins
+var helper     = require('meta4common');   // files & mixins
 
 // =============================================================================
 // configure the API routes
