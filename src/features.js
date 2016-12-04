@@ -37,16 +37,9 @@ self.register = function(key, options) {
         feature.path = feature.path || "/"+feature.id;
     }
 
-    feature.can = _.extend( { read: true }, feature.can);
-    feature.package = feature.package || feature.id;
-    feature.requires = feature.requires || feature.package;
+    feature.plugin = feature.plugin || feature.id;
 
-    if (feature.home) {
-        helpers.files.mkdirs(feature.home);
-        debug("create %s home folder: %s", feature.id, feature.home);
-    }
-
-debug("Registered: (%s @ %s) %s -> %j", feature.id, feature.path, feature.package, feature.requires);
+debug("plugin %s = %s @ %s", feature.plugin, feature.id, feature.path);
     return feature;
 };
 
@@ -74,7 +67,9 @@ self.all = function() {
  *
  * @param meta4
  */
-self.configure = function(meta4) {
+self.boot = function(meta4, plugins) {
+    assert(meta4, "Missing {{meta4}}");
+    plugins = plugins || {};
 
 	var config = meta4.config;
     assert(config.home, "Feature.configure is missing {{home}}")
@@ -90,11 +85,13 @@ self.configure = function(meta4) {
     })
 
     // force minimal defaults
+    var i = 0;
     _.each(self.__features, function(options, key) {
         options.id = options.id || key;
-        options.order = options.order?options.order:100;
+        options.order = options.order?options.order:1000+(i++);
         options.basePath = options.basePath || config.basePath + (options.path || options.id );
-    });2
+        options.basePath = paths.normalize(options.basePath);
+    });
 
     // match longest (most specific) paths first
     var sorted = _.sortBy( _.values(self.__features) , function(a) { return a.order })
@@ -107,13 +104,9 @@ self.configure = function(meta4) {
 	self._configureFeature( meta4, self.__features.sitemap );
 
     // naively prioritize routes based - shortest paths first
-    _.each( sorted, function(options ) {
-        var configured = self._configureFeature(meta4, options);
-        if (!configured) {
-            debug("%s has no installed options", options.id);
-        } else {
-            _.extend(self.__features[options.id], configured);
-//            debug("config feature: %s %j\n%j", options.id, configured, _.keys(configured.fn))
+    _.each( sorted, function(options) {
+        if (!options.configured) {
+            var configured = self._configureFeature(meta4, options);
         }
     });
 
@@ -128,48 +121,39 @@ self.configure = function(meta4) {
  * @private
  */
 self._configureFeature = function(meta4, options) {
-    assert(meta4, "Missing meta core");
-    assert(meta4.require, "Invalid meta4 core");
-    if (!options) return false;
+    assert(meta4, "Missing meta4 core");
+    assert(meta4.plugins, "Missing meta4 plugins");
+    if (!options) return;
 
+    var _plugin = options.plugin || options.id;
+    assert (!plugin || _.isString(plugin), "Invalid plugin");
+    var plugin = _plugin?meta4.plugins.get(_plugin):false;
+
+    var _options = _.extend( _.omit(plugin, ["fn"]), options );
+
+    assert(_options, "Missing feature options");
+    assert(_options.id, "Missing feature id");
     if (options.disabled) {
-        debug("disabled: %s %s %s", options.id, options.package, options.disabled );
+        debug("disabled: %s", options.id);
         return;
     }
 
-//    assert(options.fn, "Missing fn()");
+    _options.can = _.extend( { read: true }, _options.can);
 
-    // if static function is declared, use it - otherwise defer loading to require()
-
-    var pkg = options.requires;
-
-    debug("configure: %s %s", options.id, pkg);
-    var fn   = _.isFunction(options.feature)?options: meta4.require( pkg );
-
-    if (fn.feature) {
-
-	    // install feature & cache result as static options i.e. pre-load expensive resources
-
-        if (fn.install) {
-	        fn.options = _.extend({}, fn.options, options, fn.install(options, meta4.config));
-        }
-
-	    // configure feature ... attach routers / request handlers
-        try {
-            var public_fn = fn.feature(meta4, options) || fn;
-            options._isConfigured = true;
-            options.fn = public_fn
-            debug("features: %s %s @ %s", options.id, options._isConfigured);
-            return options;
-        } catch(e) {
-debug("%s failed: %s", options.package, e);
-	        throw e;
-        }
-
-    } else {
-console.warn("skip feature: ", options.id, "@", pkg)
-        return options;
+    if (_options.home) {
+        helpers.files.mkdirs(_options.home);
+        debug("create %s folder: %s", _options.id, _options.home);
     }
+
+    if (_.isFunction(plugin.fn)) {
+        debug("boot %s", options.id);
+        plugin.fn.apply(_options, [meta4, _options]);
+    } else {
+        throw "meta4:oops:plugin#missing-fn()@"+_plugin;
+    }
+
+    options.configured = true;
+    return _options;
 };
 
 self.teardown = function(options) {

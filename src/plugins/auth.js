@@ -25,7 +25,7 @@ var hbs                 = require('express-handlebars');
 
 // =============================================================================
 
-self.feature = function(meta4, feature) {
+self.fn = function(meta4, feature) {
 
 	// Sanity Checks
 	assert(meta4,       "feature missing {{meta4}}")
@@ -53,7 +53,7 @@ self.feature = function(meta4, feature) {
     // Feature Defaults
     feature = _.extend({
         disabled: true,
-        order: 30,
+        order: 9000,
         path: "",
         paths: {
             index:  "/admin.html",

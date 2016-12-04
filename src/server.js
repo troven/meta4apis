@@ -13,12 +13,12 @@ var _          = require('underscore');     // collections helper
 var __         = require('underscore-deep-extend');
 var debug      = require("./debug")("server");
 var Emitter    = require('events').EventEmitter;
-var hbs         = require('express-handlebars');
+var hbs        = require('express-handlebars');
 
 // =============================================================================
 // meta4 packages
 
-var features    = require('./features');        // features
+var meta4plugins    = require("./plugins");
 
 // =============================================================================
 // support POST payloads
@@ -31,8 +31,8 @@ var self = module.exports = new Emitter();
 // =============================================================================
 // process command line & boot application
 
-self.features = features;
-self.__plugins = [];
+self.features = require('./features');
+self.plugins = require("./Registry")("plugins");
 
 // hack to expose utils
 
@@ -61,25 +61,10 @@ self.boot = function(filename, options, callback) {
 	    debug("booting : %s", paths.normalize(filename));
 	    callback && callback(null, self._config)
     });
-};
 
-/**
- * Configure a Feature Machine (Node-Machine that returns a feature map)
- *
- * @param featureMachine
- * @returns {*}
- */
-self.plugin = function(featureMachine) {
-
-    if (featureMachine.fn && _.isFunction(featureMachine.fn)) {
-        self.__plugins.push(featureMachine);
-        return featureMachine;
-    } else {
-        throw new Error("Invalid Plugin")
-    }
-
-    return false;
-
+    _.each(meta4plugins, function(v,k) {
+        self.plugins.register(k,v);
+    })
 };
 
 /**
@@ -114,19 +99,14 @@ self.start = function(config, callback) {
     var app = require("./app")(config);
 
     // configure meta4 features
-    var meta4 = { app: app.app, router: app.router, config: config, vents: self, features: self.features, require: self.require };
+    var meta4 = { app: app.app, router: app.router, config: config, vents: self, features: self.features, plugins: self.plugins };
 
-    // register deferred plugins - they need an initialised meta4 config
-    _.each(self.__plugins, function(plugin) {
-        var options = plugin.fn(meta4);
+    var plugins = self.plugins.boot(meta4);
+    debug("plugins activated: %j", _.keys(plugins));
 
-        if (!options || !options.features) throw "Plugin returned no features"
-        features.registerAll( options.features );
-    })
-    debug("registered plugins ...");
+    self.featured = self.features.boot(meta4, plugins);
 
-    features.configure(meta4);
-    debug("configured features ...");
+    debug("configured features: %j", _.keys(self.featured) );
 
     var httpd       = require('http').Server(meta4.app);  // create app server
 
@@ -142,7 +122,7 @@ self.start = function(config, callback) {
 	    callback && callback(null, config)
     });
 
-	// TODO: fix client-side bug
+	// TODO: fix client-side bug first
 //    io.on('connection', function (socket) {
 //        debug("socket io")
 //        socket.emit("hello");
@@ -153,14 +133,13 @@ self.start = function(config, callback) {
 //    });
 };
 
-self.shutdown = function(config) {
-	self.emit("shutdown:"+config.name, config);
+self.shutdown = function() {
 
-	_.each(config.features, function(feature, key) {
-		features.teardown(feature)
+	_.each(self.featured, function(feature, key) {
+        features.teardown && features.teardown(feature);
 	});
 
-	self.emit("shutdown", config);
+    self.emit("shutdown");
 
 	process.exit(0);
 };

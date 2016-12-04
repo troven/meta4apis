@@ -30,7 +30,7 @@ self.install = function(feature, config) {
 
 // Configure the feature
 
-self.feature = function(meta4, feature) {
+self.fn = function(meta4, feature) {
 
 	// Sanity Checks
 	assert(meta4,       "feature missing {{meta4}}")

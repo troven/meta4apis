@@ -27,7 +27,7 @@ var helper     = require('meta4common');   // files & mixins
 // =============================================================================
 // configure the API routes
 
-self.feature = function(meta4, feature) {
+self.fn = function(meta4, feature) {
 
 	// Sanity Checks
 

@@ -19,7 +19,7 @@ var crud       = require('./crud');           // CRUD
 // =============================================================================
 // Configure Upload Feature
 
-self.feature = function(meta4, feature) {
+self.fn = function(meta4, feature) {
 
 	// Sanity Checks
 	assert(meta4,       "feature missing {{meta4}}")
@@ -63,7 +63,7 @@ self.uploader = function(feature, meta4) {
     assert(feature.path,"feature missing {{feature.path}}")
 
     var uploadDir = feature.home
-    debug("Upload Attached: %s -> %s", feature.path, uploadDir)
+    debug("attached: %s -> %s", uploadDir, feature.path)
     helper.files.mkdirs(uploadDir)
 
     return function(req, res, next) {

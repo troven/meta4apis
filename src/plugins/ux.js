@@ -13,19 +13,21 @@ var debug      = require('../debug')("ux"); // debug
 // =============================================================================
 // meta4 packages
 
-var helpers     = require('meta4common');      // utilities
-var meta4ux     = require("meta4ux");
 
 // =============================================================================
 // Configure UX - load recipes from local files
 
-exports.feature = function(meta4, feature) {
+exports.fn = function(meta4, feature) {
 
 	// Sanity Checks
     assert(meta4, "feature is missing {{meta4}}");
 	assert(meta4.router, "feature is missing {{meta4.router}}");
 	assert(meta4.config, "feature is missing {{meta4.config}}");
 	assert(meta4.vents, "feature is missing {{meta4.vents}}");
+
+    var helpers     = require('meta4common');      // utilities
+    var meta4ux     = meta4.plugins.get("meta4ux");
+    assert(meta4ux, "Missing meta4ux widgets");
 
     // we need to find lots of files ... so, are we correctly configured?
 	assert(feature, "feature is missing {{feature}}");
@@ -40,7 +42,7 @@ exports.feature = function(meta4, feature) {
         path: "/ux",
         order: 40,
         modelPath: "/models",
-        home: __dirname+"/../static/",
+        home: meta4ux.resolve(),
         crud: {},
         paths: {
             models: config.home+"/models",
@@ -53,8 +55,6 @@ exports.feature = function(meta4, feature) {
 
     // CRUD path for UX
     feature.crud = feature.crud || self.__features.crud.path;
-
-    var DEBUG = feature.debug || false;
 
 // =============================================================================
 
@@ -81,12 +81,10 @@ exports.feature = function(meta4, feature) {
 	debug("UX path: ", feature.path, _.keys(self.cache) );
 
     // server UX definitions
-    router.get(feature.path+"/:id?", function(req, res) {
+    router.get(feature.path+"/view/:id?", function(req, res) {
 
         var port = req.get("X-Forwarded-Port") || req.connection.localPort;
         var host = req.get("X-Forwarded-IP") || req.protocol+"://"+req.hostname;
-
-debug("GET UX: ", req.path, " -> ", host, port   );
 
         // re-cache
 	    var recipe = _.extend({}, self.cache);
@@ -102,7 +100,9 @@ debug("GET UX: ", req.path, " -> ", host, port   );
 
         recipe.url = host+":"+port+config.basePath;
 
-	    // vent our intentions
+        feature.debug && debug("view: %j", recipe);
+
+        // vent our intentions
 	    meta4.vents.emit(feature.id, "home", req.user||false, recipe||false);
 	    meta4.vents.emit(feature.id+":home", req.user||false, recipe||false);
 
@@ -120,8 +120,9 @@ debug("GET UX: ", req.path, " -> ", host, port   );
 
     // embedded static UX files
     router.get(feature.path+'/*', function(req,res,next) {
+
         var file = paths.normalize(assetHome+req.path);
-        debug("UX get: %s", file);
+        feature.debug && debug("static: %s", file);
 
         var insideHomeDir = file.indexOf(assetHome);
         if (insideHomeDir == 0) {
@@ -133,6 +134,7 @@ debug("GET UX: ", req.path, " -> ", host, port   );
             }
             next && next();
         } else {
+            debug("missing: %s", file);
             res.sendStatus(404);
         }
     });

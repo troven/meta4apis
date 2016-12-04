@@ -50,6 +50,7 @@
     "multer": "~0.1.8",
     "mustache-express": "~1.2.1",
     "node-uuid": "^1.4.3",
+    "opn": "^4.0.2",
     "optimist": "0.2.x",
     "orientjs": "^2.2.3",
     "passport": "~0.2.2",

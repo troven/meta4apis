@@ -25,7 +25,7 @@ var hbs = require('express-handlebars');
 // =============================================================================
 // configure the API routes
 
-self.feature = function(meta4, feature) {
+self.fn = function(meta4, feature) {
 
 	assert(meta4, "feature needs meta4");
 	assert(meta4.router, "feature needs meta4.router");

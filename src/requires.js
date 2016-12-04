@@ -1,6 +1,11 @@
+var _          = require('underscore');     // collections helper
 var debug      = require("./debug")("requires");
 
 module.exports = function(name, required) {
+    if (!_.isString(name) ) {
+        return name;
+    }
+
     try {
         // built-in
         var path ="./feature/"+name;

@@ -27,7 +27,7 @@ var hbs = require('express-handlebars');
 // =============================================================================
 // configure the API routes
 
-self.feature = function(meta4, feature) {
+self.fn = function(meta4, feature) {
 
 	// Sanity Checks
 	assert(meta4,       "feature missing {{meta4}}");
