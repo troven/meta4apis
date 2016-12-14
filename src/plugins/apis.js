@@ -7,6 +7,7 @@ var fs         = require('fs');             // file system
 var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var debug      = require("../debug")("feature:apis");
+// var redbird    = require("redbird");
 
 // =============================================================================
 // meta4 packages
@@ -29,8 +30,12 @@ exports.fn = function(meta4, feature) {
     // configure API
     feature = _.extend({
         path: "/api",
-        home: config.home+"/api"
+        routes: {}
     }, feature);
+
+    _.each(feature.routes, function(route, rpath) {
+
+    });
 
 
     // TODO
