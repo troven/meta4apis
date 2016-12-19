@@ -18,18 +18,21 @@ exports._db = {}
 // acquire a Database
 
 var acquireDatabase = function(crud, cb) {
-	assert (crud, "OrientDb CRUD missing options");
-	assert (crud.adapter, "OrientDb CRUD missing adapter");
-    assert (crud.adapter.type, "OrientDb CRUD missing adapter.type");
+	assert (crud, "missing CRUD options");
+	assert (crud.adapter, "missing CRUD adapter");
+    assert (crud.adapter.type, "missing CRUD adapter.type");
+    assert (cb, "missing CRUD callback");
+
+    var DEBUG = crud.debug;
 
     crud.class = crud.class || crud.collection || crud.id;
-    assert(crud.class, "Missing ODB class");
+    assert(crud.class, "Missing orientdb class");
 
     /*
         var server = exports._db[crud.id]
         if (server) {
             var db = server.use(crud.adapter.database.name)
-    debug("cachedDatabase", crud.id, crud.adapter.database.name )
+    DEBUG && debug("cachedDatabase", crud.id, crud.adapter.database.name )
             cb && cb(null, db)
             return
         }
@@ -44,52 +47,67 @@ var acquireDatabase = function(crud, cb) {
         database: { name: false }
     }, crud.adapter );
 
-    assert (adapter.database, "OrientDb CRUD missing options.database");
-    assert (adapter.database.name, "OrientDb CRUD missing options.database.name ");
+    assert (adapter.database, "missing CRUD adapter.database");
+    assert (adapter.database.name, "missing CRUD adapter.database.name ");
 
-//    debug("Connect: %s -> %s @ %s:%s", crud.id, adapter.username, adapter.host, adapter.port);
+//    DEBUG && debug("Connect: %s -> %s @ %s:%s", crud.id, adapter.username, adapter.host, adapter.port);
 	exports.__server = exports.__server || OrientDB(adapter);
 
-	var db = exports.__server.use(crud.adapter.database.name);
+	var db = exports.__server.use(adapter.database.name);
 
-debug("Database (%s : %s) connected: %s  -> %s @ %s:%s", crud.adapter.type, crud.adapter.database.name, crud.id, adapter.username, adapter.host, adapter.port);
+DEBUG && debug("Connected (%s : %s) -> %s  -> %s @ %s:%s", crud.adapter.type, adapter.database.name, crud.id, adapter.username, adapter.host, adapter.port);
 
 	cb && cb(null, db);
     return db;
 
 }
 
-exports.install = function(crud, cb) {
+exports.install = function(crud, feature, cb) {
     assert(crud, "Missing CRUD");
     assert(crud.id, "Missing CRUD id");
     assert(crud.adapter, "Missing CRUD options");
+    assert(feature, "Missing CRUD feature");
+    assert(cb, "Missing CRUD callback");
+
+    var DEBUG = crud.debug;
 
     acquireDatabase(crud, function(err, db) {
 
         if (err) {
             debug("Install Failed: %j -> %s", crud, err);
 			exports.close(db);
-			cb && cb( { status: "failed", message: err })
+			cb && cb( err, { status: "failed", message: err });
 			return false;
 		}
 
         var classname = crud.class;
-//        debug("Creating Class: %s -> %s (schema: %s)", classname, crud.adapter.type,crud.schema?true:false );
+
+        DEBUG && debug("Installing %s x %s @ %s (schema? %s)", _.keys(crud.defaults).length, classname, crud.adapter.type, crud.schema?true:false );
 
 		db.class.get(classname).then(function() {
 
-            debug('class: ', classname);
+            debug("existing class: %s", classname);
+
 			exports.close(db);
-            cb && cb( { status: "success", class: myClass })
+            cb && cb( null, { status: "success", class: myClass });
 
 		}).catch(function () {
 
+            DEBUG && debug("Creating class: %s -> %s (schema? %s)", classname, crud.adapter.type,crud.schema?true:false );
+
 			db.class.create(classname).then(function (myClass) {
-debug('Created class: ', classname, myClass);
+DEBUG && debug('Created class: ', classname, myClass);
+
+                _.each(crud.defaults, function(data) {
+                    db.insert().into(myClass).set(data).one();
+                });
+
+                DEBUG && debug('Imported %s x %s records', _.keys(crud.defaults).length, classname);
+
 				exports.close(db);
-                cb && cb( { status: "success", class: myClass })
+                cb && cb( null, { status: "success", class: myClass })
 			}).catch(function(err) {
-debug('Failed to create class: %s -> %j', classname, err);
+                debug('Failed to create class: %s -> %j', classname, err);
 				exports.close(db);
 			});
 		});
@@ -97,7 +115,7 @@ debug('Failed to create class: %s -> %j', classname, err);
 }
 
 exports.close = function(db) {
-//	debug("Close ODB: %s -> %s", db.name, db.sessionId);
+//	DEBUG && debug("Close ODB: %s -> %s", db.name, db.sessionId);
     db.close();
 }
 
@@ -106,9 +124,11 @@ exports.close = function(db) {
 
 exports.create = function(crud, data, cb) {
 
+    var DEBUG = crud.debug;
+
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
-			cb && cb( { status: "failed", message: err })
+			cb && cb( err, { status: "failed", message: err })
 			exports.close(db);
 			return false
 		}
@@ -116,8 +136,8 @@ exports.create = function(crud, data, cb) {
 
 		db.insert().into(crud.class).set(data).one().then(function(model) {
 			// we're done
-			cb && cb({ status: "success", data: model, meta: { schema: crud.schema, count: 1 } })
-debug(" created:",crud.class, model)
+			cb && cb( null, { status: "success", data: model, meta: { schema: crud.schema, count: 1 } })
+DEBUG && debug("created:",crud.class, model)
 			exports.close(db);
 		});
 	});
@@ -128,20 +148,28 @@ debug(" created:",crud.class, model)
 
 exports.read = function(crud, meta, cb) {
 
+    var DEBUG = crud.debug;
+
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
-			cb && cb( { status: "failed", message: err })
+			cb && cb( null, { status: "failed", message: err })
 			exports.close(db);
 			return false
 		}
 
-debug(" read:",crud.class)
+DEBUG && debug("read:",crud.class)
 
 		// TODO: implement 'meta' to instantiate a 'filter'
 		db.class.get(crud.class).then(function (oClass) {
+
+            DEBUG && debug("found class: %s", crud.class);
+
 			oClass.list().then(function(models) {
+
+                DEBUG && debug("read: %s x %s", models?models.length:-1 , crud.class);
+
 				// we're done
-				cb && cb( { status: "success", data: models, meta: { filter: false, count: models.length } });
+				cb && cb( null, { status: "success", data: models, meta: { filter: false, count: models.length } });
 				exports.close(db);
 			})
 		})
@@ -154,19 +182,21 @@ debug(" read:",crud.class)
 
 exports.update = function(crud, data, cb) {
 
+    var DEBUG = crud.debug;
+
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
-			cb && cb( { status: "failed", message: err })
+			cb && cb( err, { status: "failed", message: err })
 			exports.close(db);
 			return false
 		}
 		var filter = {}
 		filter[crud.idAttribute] = data[crud.idAttribute]
 
-debug(" update:", crud.class, data, filter)
+DEBUG && debug("update:", crud.class, data, filter)
 
 		db.update(crud.class).set(data).where( filter ).scalar().then(function (total) {
-			cb && cb( { status: "success", data: data, meta: { filter: filter, count: total } });
+			cb && cb( null, { status: "success", data: data, meta: { filter: filter, count: total } });
 			exports.close(db);
 		})
 	})
@@ -178,19 +208,21 @@ debug(" update:", crud.class, data, filter)
 
 exports.delete = function(crud, data, cb) {
 
+    var DEBUG = crud.debug;
+
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
-			cb && cb( { status: "failed", message: err })
+			cb && cb( err, { status: "failed", message: err })
 			exports.close(db);
 			return false
 		}
 		var filter = {}
 		filter[crud.idAttribute] = data[crud.idAttribute]
 
-debug(" delete:", crud.class, data, filter)
+DEBUG && debug("delete:", crud.class, data, filter)
 
 		db.delete().from(crud.class).where( filter ).limit(1).scalar().then(function (total) {
-			cb && cb( { status: "success", data: data, meta: { filter: filter, count: total} });
+			cb && cb( null, { status: "success", data: data, meta: { filter: filter, count: total} });
 			exports.close(db);
 		})
 	})
@@ -202,9 +234,11 @@ debug(" delete:", crud.class, data, filter)
 
 exports.find = function(crud, data, cb) {
 
+    var DEBUG = crud.debug;
+
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
-			cb && cb( { status: "failed", message: err })
+			cb && cb( err, { status: "failed", message: err })
 			exports.close(db);
 			return false
 		}
@@ -219,12 +253,12 @@ exports.find = function(crud, data, cb) {
 		if (!where) where = crud.idAttribute+"=:"+crud.idAttribute;
 
 		var query = "SELECT * FROM "+crud.class+ " WHERE "+where
-debug(" find:",crud.class, query, data)
+DEBUG && debug("find:",crud.class, query, data)
 
 		return db.query(query, {params: data }).then(function (results) {
-debug("Found: %j %s %j",crud, where, results)
+DEBUG && debug("Found: %j %s %j",crud, where, results)
 			var meta = { filter: data, count: results.length }
-			cb && cb( { status: "success", data: results[0] || {} , meta: meta });
+			cb && cb( null, { status: "success", data: results[0] || {} , meta: meta });
 			exports.close(db);
 		})
 	})
@@ -234,28 +268,30 @@ debug("Found: %j %s %j",crud, where, results)
 // Run SQL Query / GET
 
 exports.query = function(crud, queryName, data, cb) {
-	assert (crud, "orientdb CRUD missing {{options}}")
-	assert (queryName, "orientdb CRUD missing {{query}}")
-	assert (data, "orientdb CRUD missing query {{meta|data}}")
+	assert (crud, "missing CRUD {{options}}")
+	assert (queryName, "missing CRUD {{query}}")
+	assert (data, "missing CRUD query {{meta|data}}")
+
+    var DEBUG = crud.debug;
 
 	acquireDatabase(crud, function(err, db) {
 
 		if (err) {
-			cb && cb( { status: "failed", message: err })
+			cb && cb( err, { status: "failed", message: err })
 			exports.close(db);
 			return false
 		}
 
 		var query = crud.queries[queryName]
-debug("query:",crud.class, queryName, query, data)
+DEBUG && debug("query:",crud.class, queryName, query, data)
 		if (!query) {
-			cb && cb( { status: "failed", message: "unknown query "+queryName});
+			cb && cb( null, { status: "failed", message: "unknown query "+queryName});
 			exports.close(db);
 			return
 		}
 		db.query(query, { params: data } ).then(function (results) {
 			var meta = { filter: data, count: results.length }
-			cb && cb( { status: "success", data: results, meta: meta });
+			cb && cb( null, { status: "success", data: results, meta: meta });
 			exports.close(db);
 		})
 	})

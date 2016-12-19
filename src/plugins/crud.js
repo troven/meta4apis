@@ -29,6 +29,8 @@ self.install = function(feature, cb) {
 
         crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {} }, crud );
         crud.id = crud.id || id;
+        var DEBUG = crud.debug || feature.debug;
+
         var adapter = self.options.adapters[crud.adapter.type];
         assert(adapter, "Missing ("+crud.adapter.type+") Adapter: "+id);
 
@@ -44,10 +46,10 @@ self.install = function(feature, cb) {
         self[crud.id] = _.extend({}, self[crud.id]);
 
         if (CRUD.install) {
-            debug("installing %s", crud.id);
+            DEBUG && debug("installing %s", crud.id);
             CRUD.install(crud, cb);
         } else {
-            debug("collection: %s", crud.id);
+            DEBUG && debug("collection: %s", crud.id);
             cb && cb(crud, feature);
         }
 

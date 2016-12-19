@@ -23,10 +23,6 @@ self.getCollection = function(crud, db) {
 	if (!collection) {
 		// if not, create it
 		collection = db.addCollection( crud.id );
-		// initial data
-		_.each(crud.data, function(data) {
-			collection.insert(data)
-		})
 	}
 	return collection
 }
@@ -208,7 +204,7 @@ exports.install = function(crud, feature, cb) {
 
     self.acquireDatabase(crud, function(err, db) {
         if (err) {
-            cb && cb( { status: "failed", err: err });
+            cb && cb( err, { status: "failed", err: err });
             return false
         }
 
