@@ -110,7 +110,7 @@ self.boot = function(meta4, plugins) {
         }
     });
 
-    return
+    return self.__features;
 };
 
 /**

@@ -22,6 +22,8 @@ var HTTP_TO_CRUD = { "POST": "create", "GET": "read", "PUT": "update", "DELETE":
 // Configure CRUD Feature
 
 self.install = function(feature, cb) {
+    assert(feature, "Missing feature");
+    assert(cb, "Missing install callback");
 
     _.each(self.models, function(crud, id) {
 
@@ -33,7 +35,7 @@ self.install = function(feature, cb) {
         crud.adapter = _.extend(crud.adapter, adapter);
         assert(crud.adapter, "Missing CRUD adapter for: "+crud.adapter.type);
 
-        var CRUD = self.CRUD(crud);
+        var CRUD = self.CRUD(crud, feature);
         assert(CRUD, "Missing CRUD: "+crud);
         assert(CRUD.install, "Missing CRUD install: "+crud);
 
@@ -42,8 +44,10 @@ self.install = function(feature, cb) {
         self[crud.id] = _.extend({}, self[crud.id]);
 
         if (CRUD.install) {
+            debug("installing %s", crud.id);
             CRUD.install(crud, cb);
         } else {
+            debug("collection: %s", crud.id);
             cb && cb(crud, feature);
         }
 
@@ -58,7 +62,7 @@ self.fn = function(meta4, feature) {
     assert(meta4.config,"feature missing {{meta4.config}}")
     assert(meta4.vents, "feature missing {{meta4.vents}}")
 
-    assert(feature, "{{crud}} feature not configured")
+    assert(feature, "{{crud}} feature not configured");
 
     feature.adapters = feature.adapters || { "default": { type: "loki" }};
     assert(feature.adapters, "{{crud}} adapters not configured")
@@ -115,9 +119,7 @@ self.fn = function(meta4, feature) {
 
     _.each(self.models, modelDefaults);
 
-    self.install(feature, function() {
-        debug("CRUD %s INSTALLED", crud.id);
-    })
+    self.install(feature, function() {} );
 
     if (feature.can.install) {
         router.post(feature.path+'/install', function(req, res, next) {
@@ -156,6 +158,9 @@ self.fn = function(meta4, feature) {
         var cmd = _.extend({
             action: HTTP_TO_CRUD[req.method],
             collection: collection, id: id,
+            options: {
+                home: feature.home || config.data
+            },
             query: req.query,
             data: req.body
         });
@@ -168,7 +173,7 @@ self.fn = function(meta4, feature) {
 
         // execute action and return response
         try {
-            self.execute(cmd, renderResult);
+            self.execute(cmd, feature, renderResult);
         } catch(e) {
             debug(e);
             res.status(500).send(e);
@@ -176,29 +181,32 @@ self.fn = function(meta4, feature) {
     });
 }
 
-self.get = function(collection) {
+self.get = function(collection, feature) {
     var crud = self.models[collection]
     // Instantiate dynamic CRUD
-    return self.CRUD(crud);
+    return self.CRUD(crud, feature || {} );
 }
 
 
-self.execute = function(cmd, cb) {
+self.execute = function(cmd, feature, cb) {
     assert(cmd, "Missing CRUD command");
     assert(cmd.action, "Missing CRUD action");
     assert(cmd.collection, "Missing CRUD collection");
+    assert(feature, "Missing CRUD feature");
     assert(cb, "Missing callback");
     assert(_.isFunction(cb), "Invalid callback");
 
 // resolve CRUD configuration
-    var crud = _.extend({ queries: {} }, self.models[cmd.collection]);
+    var crud = _.extend({ queries: {} }, cmd.options, self.models[cmd.collection]);
 // unified command meta-data by merging Form fields (POST) & query params (GET)
+
+    feature.debug && debug("CRUD: %j", crud);
 
     assert( (cmd.collection == crud.collection), "Mismatched CRUD collection: "+cmd.collection);
     cmd.query = _.extend({}, cmd.query, crud.queries[cmd.id]);
 
 // acquire CRUD adapter (switchback)
-    var CRUD = self.CRUD(crud);
+    var CRUD = self.CRUD(crud, feature);
 
 // find action in CRUD switchback
     var action = CRUD[cmd.action];
@@ -215,29 +223,43 @@ self.execute = function(cmd, cb) {
 // plus injects closures for each named-query
 // each closure has the same signature: fn(model,callback)
 
-self.CRUD = function(crud, user) {
+self.CRUD = function(crud, feature, user) {
 //    assert(meta4, "Missing meta4");
     assert(crud, "Missing CRUD config");
+    assert(feature, "Missing CRUD feature");
+    feature.adapters = feature.adapters || {};
 
     // default CRUD meta-data
-    crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {}, queries: {} }, crud );
+    crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {}, queries: {} }, crud, crud.server );
+    user = user || {};
 
-    assert( (crud.isServer || crud.isRemote), "CRUD model ["+crud.id+"] is client-only" );
+    delete crud.client;
+    delete crud.server;
+
+    var isServer = (crud.isServer || crud.server || crud.adapter)?true:false;
+    var isClient = (crud.isClient || crud.client)?true:false;
+
+    assert( isServer, "CRUD model ["+crud.id+"] is client only" );
 
     assert(crud.adapter, "Missing CRUD adapter");
-    assert(crud.adapter.type, "Missing CRUD adapter.type");
+    var adapterType = crud.adapter.type;
+
+    assert(adapterType, "Missing CRUD adapter.type");
 
     // resolve database-specific adapter implementation
     // crud.store is legacy config
-    var adapter = require( "./crud/adapter/"+(crud.store || crud.adapter.type) );
+    var adapter = require( "./crud/adapter/"+adapterType );
     assert(adapter,"missing adapter: "+crud.requires);
+
+    // features over-ride model defaults
+    crud.adapter = _.extend( crud.adapter, feature.adapters[adapterType]);
 
     // Switchback encapsulates a raw Adapter
     // call before / after functions
 
     var CRUD = {
         install: function (config, cb) {
-            return adapter.install ? adapter.install(crud, config, cb) : false;
+            return adapter.install ? adapter.install(crud, feature, cb) : false;
         },
         create: function (model, cb) {
             model = self.before.create(model, crud, user);

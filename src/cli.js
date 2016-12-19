@@ -46,7 +46,7 @@ var self = module.exports = {
         if (args.length>0) {
             self.announce();
             args.forEach(function(path) {
-                self.boot(path+"/"+BOOT_FILE, argv, function(err, config) {
+                bootable.boot(path+"/"+BOOT_FILE, argv, function(err, config) {
                     self.start(config, callback)
                 })
             })

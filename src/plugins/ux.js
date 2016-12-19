@@ -86,8 +86,13 @@ exports.fn = function(meta4, feature) {
         var port = req.get("X-Forwarded-Port") || req.connection.localPort;
         var host = req.get("X-Forwarded-IP") || req.protocol+"://"+req.hostname;
 
-        // re-cache
-	    var recipe = _.extend({}, self.cache);
+        // reload app cache
+        if (feature.reload) {
+            debug("reload '%s' view", req.params.id );
+            self.cache = helpers.mvc.reload.all(feature);
+        }
+
+        var recipe = _.extend({}, self.cache);
 
 	    // server-side features
 	    recipe.server = {};
@@ -99,6 +104,14 @@ exports.fn = function(meta4, feature) {
 	    recipe.id = req.params.id || config.name;
 
         recipe.url = host+":"+port+config.basePath;
+
+        // filter server-side config
+        _.each(recipe.models, function(model) {
+            _.extend(model, model.client);
+            delete model.server;
+            delete model.adapter;
+            delete model.client;
+        });
 
         feature.debug && debug("view: %j", recipe);
 
@@ -115,27 +128,29 @@ exports.fn = function(meta4, feature) {
 
     });
 
-    var assetHome = paths.normalize(feature.home);
-    debug("home directory: %s", assetHome);
+    if (feature.home) {
+        var assetHome = paths.normalize(feature.home);
+        debug("custom assets: %s", assetHome);
 
-    // embedded static UX files
-    router.get(feature.path+'/*', function(req,res,next) {
+        // embedded static UX files
+        router.get(feature.path+'/*', function(req,res,next) {
 
-        var file = paths.normalize(assetHome+req.path);
-        feature.debug && debug("static: %s", file);
+            var file = paths.normalize(assetHome+req.path);
+            feature.debug && debug("static: %s", file);
 
-        var insideHomeDir = file.indexOf(assetHome);
-        if (insideHomeDir == 0) {
-            var stat = fs.existsSync(file);
+            var insideHomeDir = file.indexOf(assetHome);
+            if (insideHomeDir == 0) {
+                var stat = fs.existsSync(file);
 //            console.log("UX Asset: (%s) %s -> %s -> %s %j", insideHomeDir, file, assetHome, req.path, stat)
-            if (stat) {
-                res.sendFile(file);
-                return;
+                if (stat) {
+                    res.sendFile(file);
+                    return;
+                }
+                next && next();
+            } else {
+                debug("missing: %s", file);
+                res.sendStatus(404);
             }
-            next && next();
-        } else {
-            debug("missing: %s", file);
-            res.sendStatus(404);
-        }
-    });
+        });
+    }
 };

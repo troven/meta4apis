@@ -56,7 +56,7 @@ self.fn = function(meta4, feature) {
         order: 9000,
         path: "",
         paths: {
-            index:  "/admin.html",
+            index:  "/index.html",
             home:   "/home",
             login:  "/login",
             logout: "/logout",
