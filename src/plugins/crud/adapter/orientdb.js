@@ -51,73 +51,28 @@ var acquireDatabase = function(crud, cb) {
     assert (adapter.database.name, "missing CRUD adapter.database.name ");
 
 //    DEBUG && debug("Connect: %s -> %s @ %s:%s", crud.id, adapter.username, adapter.host, adapter.port);
-	exports.__server = exports.__server || OrientDB(adapter);
+    var server = OrientDB(adapter);
+    DEBUG && debug("using (%s : %s) -> %s  -> %s @ %s:%s", crud.adapter.type, adapter.database.name, crud.id, adapter.username, adapter.host, adapter.port);
 
-	var db = exports.__server.use(adapter.database.name);
+	var db = server.use(adapter.database);
 
-DEBUG && debug("Connected (%s : %s) -> %s  -> %s @ %s:%s", crud.adapter.type, adapter.database.name, crud.id, adapter.username, adapter.host, adapter.port);
+    db.open().then(function() {
+        DEBUG && debug("Querying");
+        db.query( 'SELECT * FROM Test' ).then(function(found) {
+            debug("found: %j", found);
+        });
+    });
 
-	cb && cb(null, db);
+    DEBUG && debug("Connected: %j -> %j (%s)", adapter.database, db.name, db.sessionId);
+
+    cb && cb(null, db);
     return db;
-
-}
-
-exports.install = function(crud, feature, cb) {
-    assert(crud, "Missing CRUD");
-    assert(crud.id, "Missing CRUD id");
-    assert(crud.adapter, "Missing CRUD options");
-    assert(feature, "Missing CRUD feature");
-    assert(cb, "Missing CRUD callback");
-
-    var DEBUG = crud.debug;
-
-    acquireDatabase(crud, function(err, db) {
-
-        if (err) {
-            debug("Install Failed: %j -> %s", crud, err);
-			exports.close(db);
-			cb && cb( err, { status: "failed", message: err });
-			return false;
-		}
-
-        var classname = crud.class;
-
-        DEBUG && debug("Installing %s x %s @ %s (schema? %s)", _.keys(crud.defaults).length, classname, crud.adapter.type, crud.schema?true:false );
-
-		db.class.get(classname).then(function() {
-
-            debug("existing class: %s", classname);
-
-			exports.close(db);
-            cb && cb( null, { status: "success", class: myClass });
-
-		}).catch(function () {
-
-            DEBUG && debug("Creating class: %s -> %s (schema? %s)", classname, crud.adapter.type,crud.schema?true:false );
-
-			db.class.create(classname).then(function (myClass) {
-DEBUG && debug('Created class: ', classname, myClass);
-
-                _.each(crud.defaults, function(data) {
-                    db.insert().into(myClass).set(data).one();
-                });
-
-                DEBUG && debug('Imported %s x %s records', _.keys(crud.defaults).length, classname);
-
-				exports.close(db);
-                cb && cb( null, { status: "success", class: myClass })
-			}).catch(function(err) {
-                debug('Failed to create class: %s -> %j', classname, err);
-				exports.close(db);
-			});
-		});
-	});
-}
+};
 
 exports.close = function(db) {
-//	DEBUG && debug("Close ODB: %s -> %s", db.name, db.sessionId);
+    debug("close: %s -> %s", db.name, db.sessionId);
     db.close();
-}
+};
 
 // =============================================================================
 // Create
@@ -264,6 +219,7 @@ DEBUG && debug("Found: %j %s %j",crud, where, results)
 	})
 
 }
+
 // =============================================================================
 // Run SQL Query / GET
 
@@ -295,5 +251,82 @@ DEBUG && debug("query:",crud.class, queryName, query, data)
 			exports.close(db);
 		})
 	})
+}
 
+// =============================================================================
+// Create new classes and default models
+
+exports.install = function(crud, feature, cb) {
+    assert(crud, "Missing CRUD");
+    assert(crud.id, "Missing CRUD id");
+    assert(crud.adapter, "Missing CRUD options");
+    assert(feature, "Missing CRUD feature");
+    assert(cb, "Missing CRUD callback");
+
+    var DEBUG = crud.debug;
+
+    acquireDatabase(crud, function (err, db) {
+
+        if (err) {
+            debug("Install Failed: %j -> %s", crud, err);
+            exports.close(db);
+            cb && cb(err, {status: "failed", message: err});
+            return false;
+        }
+
+        var classname = crud.class;
+        DEBUG && debug("Installing %s x %s @ %s (schema? %s)", _.keys(crud.defaults).length, classname, crud.adapter.type, crud.schema ? true : false);
+
+        db.class.get(classname).then(function () {
+
+            debug("existing class: %s", classname);
+            exports.close(db);
+            cb && cb(null, {status: "success", collection: classname});
+
+        }).catch(function () {
+
+            debug("Creating class: %s -> %s (schema? %s)", classname, crud.adapter.type, crud.schema ? true : false);
+
+            db.class.create(classname).then(function (myClass) {
+                DEBUG && debug("Created class: %j", classname);
+
+                _.each(crud.defaults, function (data) {
+                    db.insert().into(classname).set(data).one();
+                });
+
+                DEBUG && debug("Imported %s x %s records", _.keys(crud.defaults).length, classname);
+
+                exports.close(db);
+                cb && cb(null, {status: "success", collection: classname, data: crud.defaults });
+            }).catch(function (err) {
+                debug("Failed to create class: %s -> %j", classname, err);
+                exports.close(db);
+            });
+        });
+    });
+}
+// =============================================================================
+// Test connections
+
+exports.test = function(crud, feature, cb) {
+    assert(crud, "Missing CRUD");
+    assert(crud.id, "Missing CRUD id");
+    assert(crud.adapter, "Missing CRUD options");
+    assert(feature, "Missing CRUD feature");
+    assert(cb, "Missing CRUD callback");
+
+    var DEBUG = crud.debug;
+
+    acquireDatabase(crud, function (err, db) {
+
+        debug("Acquired test connect: %j -> %s", crud, err);
+        if (err) {
+            exports.close(db);
+            cb && cb(err, {status: "failed", message: err});
+            return false;
+        }
+
+        var dbs = db.list().then( function(list) { debug("%s x databases: %j", list.length, list); });
+
+    });
 }

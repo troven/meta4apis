@@ -25,6 +25,7 @@ self.install = function(feature, cb) {
     assert(feature, "Missing feature");
     assert(cb, "Missing install callback");
 
+
     _.each(self.models, function(crud, id) {
 
         crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {} }, crud );
@@ -40,6 +41,10 @@ self.install = function(feature, cb) {
         var CRUD = self.CRUD(crud, feature);
         assert(CRUD, "Missing CRUD: "+crud);
         assert(CRUD.install, "Missing CRUD install: "+crud);
+
+        CRUD.test(crud, feature, function(err, data) {
+            debug("Tested: %s -> %j", err, data);
+        })
 
         // ensure we have a namespace for each model
         assert(!self[crud.id], "CRUD namespace already exists: "+crud.id);
@@ -260,6 +265,9 @@ self.CRUD = function(crud, feature, user) {
     // call before / after functions
 
     var CRUD = {
+        test: function (config, cb) {
+            return adapter.selftest ? adapter.selftest(crud, feature, cb) : false;
+        },
         install: function (config, cb) {
             return adapter.install ? adapter.install(crud, feature, cb) : false;
         },
