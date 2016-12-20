@@ -77,9 +77,10 @@ exports.close = function(db) {
 // =============================================================================
 // Create
 
-exports.create = function(crud, data, cb) {
+exports.create = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
+    var data = cmd.data;
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
@@ -135,9 +136,10 @@ DEBUG && debug("read:",crud.class)
 // =============================================================================
 // Update / PUT
 
-exports.update = function(crud, data, cb) {
+exports.update = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
+    var data = cmd.data;
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
@@ -161,9 +163,10 @@ DEBUG && debug("update:", crud.class, data, filter)
 // =============================================================================
 // Delete / DELETE
 
-exports.delete = function(crud, data, cb) {
+exports.delete = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
+    var data = cmd.data;
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
@@ -187,9 +190,10 @@ DEBUG && debug("delete:", crud.class, data, filter)
 // =============================================================================
 // Find / GET
 
-exports.find = function(crud, data, cb) {
+exports.find = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
+    var data = cmd.data;
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
