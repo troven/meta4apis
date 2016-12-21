@@ -153,7 +153,7 @@ self.fn = function(meta4, feature) {
 
         var id = req.params.id
         // kludge to prevent match on duplicate routes
-        if (id == "_upload_") return next()
+        if (id == "_upload_") return next();
 
         var collection = req.params.collection;
         if (!self.models[collection]) {
