@@ -43,7 +43,7 @@ var acquireDatabase = function(crud, cb) {
         port: 2424,
         username: false,
         password: false,
-        pool: { max: 20 },
+        pool: { max: 100 },
         database: { name: false }
     }, crud.adapter );
 
@@ -52,18 +52,9 @@ var acquireDatabase = function(crud, cb) {
 
 //    DEBUG && debug("Connect: %s -> %s @ %s:%s", crud.id, adapter.username, adapter.host, adapter.port);
     var server = OrientDB(adapter);
-    DEBUG && debug("using (%s : %s) -> %s  -> %s @ %s:%s", crud.adapter.type, adapter.database.name, crud.id, adapter.username, adapter.host, adapter.port);
 
 	var db = server.use(adapter.database);
-
-    db.open().then(function() {
-        DEBUG && debug("Querying");
-        db.query( 'SELECT * FROM Test' ).then(function(found) {
-            debug("found: %j", found);
-        });
-    });
-
-    DEBUG && debug("Connected: %j -> %j (%s)", adapter.database, db.name, db.sessionId);
+    DEBUG && debug("#%s using (%s : %s) -> %s  -> %s @ %s:%s", db.sessionId, crud.adapter.type, adapter.database.name, crud.id, adapter.username, adapter.host, adapter.port);
 
     cb && cb(null, db);
     return db;
@@ -84,17 +75,17 @@ exports.create = function(crud, cmd, cb) {
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
+            exports.close(db);
 			cb && cb( err, { status: "failed", message: err })
-			exports.close(db);
 			return false
 		}
 
 
 		db.insert().into(crud.class).set(data).one().then(function(model) {
 			// we're done
+            exports.close(db);
+            DEBUG && debug("created:",crud.class, model)
 			cb && cb( null, { status: "success", data: model, meta: { schema: crud.schema, count: 1 } })
-DEBUG && debug("created:",crud.class, model)
-			exports.close(db);
 		});
 	});
 }
@@ -108,8 +99,8 @@ exports.read = function(crud, meta, cb) {
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
+            exports.close(db);
 			cb && cb( null, { status: "failed", message: err })
-			exports.close(db);
 			return false
 		}
 
@@ -125,8 +116,8 @@ DEBUG && debug("read:",crud.class)
                 DEBUG && debug("read: %s x %s", models?models.length:-1 , crud.class);
 
 				// we're done
+                exports.close(db);
 				cb && cb( null, { status: "success", data: models, meta: { filter: false, count: models.length } });
-				exports.close(db);
 			})
 		})
 	})
@@ -143,18 +134,18 @@ exports.update = function(crud, cmd, cb) {
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
+            exports.close(db);
 			cb && cb( err, { status: "failed", message: err })
-			exports.close(db);
 			return false
 		}
 		var filter = {}
 		filter[crud.idAttribute] = data[crud.idAttribute]
 
-DEBUG && debug("update:", crud.class, data, filter)
+DEBUG && debug("update: %s -> %j -> %j", crud.class, data, filter)
 
 		db.update(crud.class).set(data).where( filter ).scalar().then(function (total) {
+            exports.close(db);
 			cb && cb( null, { status: "success", data: data, meta: { filter: filter, count: total } });
-			exports.close(db);
 		})
 	})
 
@@ -170,8 +161,8 @@ exports.delete = function(crud, cmd, cb) {
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
+            exports.close(db);
 			cb && cb( err, { status: "failed", message: err })
-			exports.close(db);
 			return false
 		}
 		var filter = {}
@@ -180,8 +171,8 @@ exports.delete = function(crud, cmd, cb) {
 DEBUG && debug("delete:", crud.class, data, filter)
 
 		db.delete().from(crud.class).where( filter ).limit(1).scalar().then(function (total) {
+            exports.close(db);
 			cb && cb( null, { status: "success", data: data, meta: { filter: filter, count: total} });
-			exports.close(db);
 		})
 	})
 
@@ -197,8 +188,8 @@ exports.find = function(crud, cmd, cb) {
 
 	acquireDatabase(crud, function(err, db) {
 		if (err) {
+            exports.close(db);
 			cb && cb( err, { status: "failed", message: err })
-			exports.close(db);
 			return false
 		}
 
@@ -217,8 +208,8 @@ DEBUG && debug("find:",crud.class, query, data)
 		return db.query(query, {params: data }).then(function (results) {
 DEBUG && debug("Found: %j %s %j",crud, where, results)
 			var meta = { filter: data, count: results.length }
+            exports.close(db);
 			cb && cb( null, { status: "success", data: results[0] || {} , meta: meta });
-			exports.close(db);
 		})
 	})
 
