@@ -10,26 +10,28 @@ var debug      = require("../../../debug")("crud:orientdb");
 
 var OrientDB = require('orientjs');
 
-exports._db = {}
+var self = module.exports;
+self.idAttribute = "@rid";
 
 // https://github.com/orientechnologies/orientjs
 
 // =============================================================================
 // acquire a Database
 
-var acquireDatabase = function(crud, cb) {
+self.acquireDatabase = function(crud, cb) {
 	assert (crud, "missing CRUD options");
 	assert (crud.adapter, "missing CRUD adapter");
     assert (crud.adapter.type, "missing CRUD adapter.type");
     assert (cb, "missing CRUD callback");
+    assert(crud.idAttribute, "Missing OrientDB idAttribute");
 
     var DEBUG = crud.debug;
 
-    crud.class = crud.class || crud.collection || crud.id;
-    assert(crud.class, "Missing orientdb class");
+    crud.collection = crud.collection || crud.collection || crud.id;
+    assert(crud.collection, "Missing orientdb class");
 
     /*
-        var server = exports._db[crud.id]
+        var server = self._db[crud.id]
         if (server) {
             var db = server.use(crud.adapter.database.name)
     DEBUG && debug("cachedDatabase", crud.id, crud.adapter.database.name )
@@ -60,7 +62,7 @@ var acquireDatabase = function(crud, cb) {
     return db;
 };
 
-exports.close = function(db) {
+self.close = function(db) {
     debug("close: %s -> %s", db.name, db.sessionId);
     db.close();
 };
@@ -68,23 +70,23 @@ exports.close = function(db) {
 // =============================================================================
 // Create
 
-exports.create = function(crud, cmd, cb) {
+self.create = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
     var data = cmd.data;
 
-	acquireDatabase(crud, function(err, db) {
+	self.acquireDatabase(crud, function(err, db) {
 		if (err) {
-            exports.close(db);
+            self.close(db);
 			cb && cb( err, { status: "failed", message: err })
 			return false
 		}
 
 
-		db.insert().into(crud.class).set(data).one().then(function(model) {
+		db.insert().into(crud.collection).set(data).one().then(function(model) {
+            DEBUG && debug("created:",crud.collection, model);
 			// we're done
-            exports.close(db);
-            DEBUG && debug("created:",crud.class, model)
+            self.close(db);
 			cb && cb( null, { status: "success", data: model, meta: { schema: crud.schema, count: 1 } })
 		});
 	});
@@ -93,30 +95,30 @@ exports.create = function(crud, cmd, cb) {
 // =============================================================================
 // Read / GET
 
-exports.read = function(crud, meta, cb) {
+self.read = function(crud, meta, cb) {
 
     var DEBUG = crud.debug;
 
-	acquireDatabase(crud, function(err, db) {
+	self.acquireDatabase(crud, function(err, db) {
 		if (err) {
-            exports.close(db);
+            self.close(db);
 			cb && cb( null, { status: "failed", message: err })
 			return false
 		}
 
-DEBUG && debug("read:",crud.class)
+DEBUG && debug("read:",crud.collection)
 
 		// TODO: implement 'meta' to instantiate a 'filter'
-		db.class.get(crud.class).then(function (oClass) {
+		db.class.get(crud.collection).then(function (oClass) {
 
-            DEBUG && debug("found class: %s", crud.class);
+            DEBUG && debug("found class: %s", crud.collection);
 
 			oClass.list().then(function(models) {
 
-                DEBUG && debug("read: %s x %s", models?models.length:-1 , crud.class);
+                DEBUG && debug("read: %s x %s", models?models.length:-1 , crud.collection);
 
 				// we're done
-                exports.close(db);
+                self.close(db);
 				cb && cb( null, { status: "success", data: models, meta: { filter: false, count: models.length } });
 			})
 		})
@@ -127,26 +129,32 @@ DEBUG && debug("read:",crud.class)
 // =============================================================================
 // Update / PUT
 
-exports.update = function(crud, cmd, cb) {
+self.update = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
     var data = cmd.data;
 
-	acquireDatabase(crud, function(err, db) {
+	self.acquireDatabase(crud, function(err, db) {
 		if (err) {
-            exports.close(db);
+            debug("OOPS update: %s -> %j", err, cmd);
+            self.close(db);
 			cb && cb( err, { status: "failed", message: err })
 			return false
 		}
-		var filter = {}
-		filter[crud.idAttribute] = data[crud.idAttribute]
+		var filter = {};
 
-DEBUG && debug("update: %s -> %j -> %j", crud.class, data, filter)
+		var id = filter[crud.idAttribute] = data[crud.idAttribute];
 
-		db.update(crud.class).set(data).where( filter ).scalar().then(function (total) {
-            exports.close(db);
-			cb && cb( null, { status: "success", data: data, meta: { filter: filter, count: total } });
-		})
+DEBUG && debug("update (%s): %s -> %j", id, crud.collection, data);
+
+        //db.update(id).set(data).where( filter ).scalar()
+		db.update(id).set(data).one().then(function (total) {
+            DEBUG && debug("updated: %s x %s -> %j -> %j", total, crud.collection, data);
+            self.close(db);
+			cb && cb( null, { status: "success", data: data, meta: { count: total } });
+		}).catch(function() {
+		    debug("ERROR: %j", arguments);
+        })
 	})
 
 }
@@ -154,24 +162,24 @@ DEBUG && debug("update: %s -> %j -> %j", crud.class, data, filter)
 // =============================================================================
 // Delete / DELETE
 
-exports.delete = function(crud, cmd, cb) {
+self.delete = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
     var data = cmd.data;
 
-	acquireDatabase(crud, function(err, db) {
+	self.acquireDatabase(crud, function(err, db) {
 		if (err) {
-            exports.close(db);
+            self.close(db);
 			cb && cb( err, { status: "failed", message: err })
 			return false
 		}
 		var filter = {}
 		filter[crud.idAttribute] = data[crud.idAttribute]
 
-DEBUG && debug("delete:", crud.class, data, filter)
+DEBUG && debug("delete:", crud.collection, data, filter)
 
-		db.delete().from(crud.class).where( filter ).limit(1).scalar().then(function (total) {
-            exports.close(db);
+		db.delete().from(crud.collection).where( filter ).limit(1).scalar().then(function (total) {
+            self.close(db);
 			cb && cb( null, { status: "success", data: data, meta: { filter: filter, count: total} });
 		})
 	})
@@ -181,14 +189,14 @@ DEBUG && debug("delete:", crud.class, data, filter)
 // =============================================================================
 // Find / GET
 
-exports.find = function(crud, cmd, cb) {
+self.find = function(crud, cmd, cb) {
 
     var DEBUG = crud.debug;
     var data = cmd.data;
 
-	acquireDatabase(crud, function(err, db) {
+	self.acquireDatabase(crud, function(err, db) {
 		if (err) {
-            exports.close(db);
+            self.close(db);
 			cb && cb( err, { status: "failed", message: err })
 			return false
 		}
@@ -202,13 +210,13 @@ exports.find = function(crud, cmd, cb) {
 		})
 		if (!where) where = crud.idAttribute+"=:"+crud.idAttribute;
 
-		var query = "SELECT * FROM "+crud.class+ " WHERE "+where
-DEBUG && debug("find:",crud.class, query, data)
+		var query = "SELECT * FROM "+crud.collection+ " WHERE "+where
+DEBUG && debug("find:",crud.collection, query, data)
 
 		return db.query(query, {params: data }).then(function (results) {
 DEBUG && debug("Found: %j %s %j",crud, where, results)
 			var meta = { filter: data, count: results.length }
-            exports.close(db);
+            self.close(db);
 			cb && cb( null, { status: "success", data: results[0] || {} , meta: meta });
 		})
 	})
@@ -218,32 +226,32 @@ DEBUG && debug("Found: %j %s %j",crud, where, results)
 // =============================================================================
 // Run SQL Query / GET
 
-exports.query = function(crud, queryName, data, cb) {
+self.query = function(crud, queryName, data, cb) {
 	assert (crud, "missing CRUD {{options}}")
 	assert (queryName, "missing CRUD {{query}}")
 	assert (data, "missing CRUD query {{meta|data}}")
 
     var DEBUG = crud.debug;
 
-	acquireDatabase(crud, function(err, db) {
+	self.acquireDatabase(crud, function(err, db) {
 
 		if (err) {
 			cb && cb( err, { status: "failed", message: err })
-			exports.close(db);
+			self.close(db);
 			return false
 		}
 
 		var query = crud.queries[queryName]
-DEBUG && debug("query:",crud.class, queryName, query, data)
+DEBUG && debug("query:",crud.collection, queryName, query, data)
 		if (!query) {
 			cb && cb( null, { status: "failed", message: "unknown query "+queryName});
-			exports.close(db);
+			self.close(db);
 			return
 		}
 		db.query(query, { params: data } ).then(function (results) {
 			var meta = { filter: data, count: results.length }
 			cb && cb( null, { status: "success", data: results, meta: meta });
-			exports.close(db);
+			self.close(db);
 		})
 	})
 }
@@ -251,7 +259,7 @@ DEBUG && debug("query:",crud.class, queryName, query, data)
 // =============================================================================
 // Create new classes and default models
 
-exports.install = function(crud, feature, cb) {
+self.install = function(crud, feature, cb) {
     assert(crud, "Missing CRUD");
     assert(crud.id, "Missing CRUD id");
     assert(crud.adapter, "Missing CRUD options");
@@ -260,22 +268,22 @@ exports.install = function(crud, feature, cb) {
 
     var DEBUG = crud.debug;
 
-    acquireDatabase(crud, function (err, db) {
+    self.acquireDatabase(crud, function (err, db) {
 
         if (err) {
             debug("Install Failed: %j -> %s", crud, err);
-            exports.close(db);
+            self.close(db);
             cb && cb(err, {status: "failed", message: err});
             return false;
         }
 
-        var classname = crud.class;
+        var classname = crud.collection;
         DEBUG && debug("Installing %s x %s @ %s (schema? %s)", _.keys(crud.defaults).length, classname, crud.adapter.type, crud.schema ? true : false);
 
         db.class.get(classname).then(function () {
 
             debug("existing class: %s", classname);
-            exports.close(db);
+            self.close(db);
             cb && cb(null, {status: "success", collection: classname});
 
         }).catch(function () {
@@ -291,11 +299,11 @@ exports.install = function(crud, feature, cb) {
 
                 DEBUG && debug("Imported %s x %s records", _.keys(crud.defaults).length, classname);
 
-                exports.close(db);
+                self.close(db);
                 cb && cb(null, {status: "success", collection: classname, data: crud.defaults });
             }).catch(function (err) {
                 debug("Failed to create class: %s -> %j", classname, err);
-                exports.close(db);
+                self.close(db);
             });
         });
     });
@@ -303,7 +311,7 @@ exports.install = function(crud, feature, cb) {
 // =============================================================================
 // Test connections
 
-exports.test = function(crud, feature, cb) {
+self.test = function(crud, feature, cb) {
     assert(crud, "Missing CRUD");
     assert(crud.id, "Missing CRUD id");
     assert(crud.adapter, "Missing CRUD options");
@@ -312,11 +320,11 @@ exports.test = function(crud, feature, cb) {
 
     var DEBUG = crud.debug;
 
-    acquireDatabase(crud, function (err, db) {
+    self.acquireDatabase(crud, function (err, db) {
 
         debug("Acquired test connect: %j -> %s", crud, err);
         if (err) {
-            exports.close(db);
+            self.close(db);
             cb && cb(err, {status: "failed", message: err});
             return false;
         }
@@ -325,3 +333,5 @@ exports.test = function(crud, feature, cb) {
 
     });
 }
+
+return self;

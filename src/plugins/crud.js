@@ -28,7 +28,7 @@ self.install = function(feature, cb) {
 
     _.each(self.models, function(crud, id) {
 
-        crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {} }, crud );
+        crud = _.extend({ adapter: { type: "default" }, schema: {}, defaults: {}, filters: {} }, crud );
         crud.id = crud.id || id;
         var DEBUG = crud.debug || feature.debug;
 
@@ -180,6 +180,7 @@ self.fn = function(meta4, feature) {
 
         // execute action and return response
         try {
+            debug("execute: %j -> %j", cmd.action, req.method);
             self.execute(cmd, feature, renderResult);
         } catch(e) {
             debug(e);
@@ -189,7 +190,7 @@ self.fn = function(meta4, feature) {
 }
 
 self.get = function(collection, feature) {
-    var crud = self.models[collection]
+    var crud = self.models[collection];
     // Instantiate dynamic CRUD
     return self.CRUD(crud, feature || {} );
 }
@@ -237,7 +238,7 @@ self.CRUD = function(crud, feature, user) {
     feature.adapters = feature.adapters || {};
 
     // default CRUD meta-data
-    crud = _.extend({ idAttribute: ID_ATTRIBUTE, adapter: { type: "default" }, schema: {}, defaults: {}, filters: {}, queries: {} }, crud, crud.server );
+    crud = _.extend({ adapter: { type: "default" }, schema: {}, defaults: {}, filters: {}, queries: {} }, crud, crud.server );
     user = user || {};
 
     delete crud.client;
@@ -261,6 +262,13 @@ self.CRUD = function(crud, feature, user) {
     // features over-ride model defaults
     crud.adapter = _.extend( crud.adapter, feature.adapters[adapterType]);
 
+    // assign the idAttribute used by Adapter
+
+    assert(adapter.idAttribute, "Missing "+adapterType+" default idAttribute");
+    assert(crud.idAttribute && (adapter.idAttribute != crud.idAttribute), "Mimatched idAttribute: "+crud.idAttribute+" not "+adapter.idAttribute);
+
+    crud.idAttribute = adapter.idAttribute;
+
     // Switchback encapsulates a raw Adapter
     // call before / after functions
 
@@ -273,6 +281,7 @@ self.CRUD = function(crud, feature, user) {
         },
         create: function (model, cb) {
             model = self.before.create(model, crud, user);
+debug("create (%s): %s -> %j", adapter.create?true:false, crud.collection, model );
             var done = adapter.create ? adapter.create(crud, model, cb) : {}
             //return self.after.create(done, crud, user);
             return done;
@@ -285,6 +294,7 @@ self.CRUD = function(crud, feature, user) {
             return done;
         },
         update: function (model, cb) {
+debug("update: %s -> %j", crud.collection, model);
             model = self.before.update(model, crud, user);
             done = adapter.update ? adapter.update(crud, model, cb) : {}
 //            done = self.after.update(done, crud, user);

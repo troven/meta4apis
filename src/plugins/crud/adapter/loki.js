@@ -12,7 +12,9 @@ var paths      = require("path");
 
 var loki       = require('lokijs');
 
-var self = exports._db = {}
+var self = exports;
+self.idAttribute = "$loki";
+self._db = {};
 
 // =============================================================================
 // safely acquire a Collection
@@ -23,7 +25,8 @@ self.getCollection = function(crud, db) {
 	if (!collection) {
 		// if not, create it
 		collection = db.addCollection( crud.id );
-	}
+	};
+
 	return collection
 }
 
@@ -31,6 +34,8 @@ self.getCollection = function(crud, db) {
 self.acquireDatabase = function(crud, cb) {
     assert(crud, "Missing CRUD");
     assert(crud.id, "Missing CRUD id");
+    assert(crud.idAttribute, "Missing LOKI idAttribute");
+
     assert(cb, "Missing CRUD callback: "+crud.id);
     assert(_.isFunction(cb), "Missing CRUD callback: "+crud.id);
 
@@ -38,6 +43,7 @@ self.acquireDatabase = function(crud, cb) {
     assert(home, "Loki CRUD @"+crud.id+" is missing home");
 
     var DEBUG = crud.debug;
+
 
 	// underlying database
 
@@ -84,7 +90,6 @@ exports.create = function(crud, cmd, cb) {
 		var found = collection.insert(cmd.data)
 
 		// externalize ID attribute
-        cmd.data[crud.idAttribute] = cmd.data["$loki"];
         DEBUG && debug("created %s -> %j",crud.id, found);
 
 		// we're done
@@ -171,6 +176,7 @@ exports.delete = function(crud, cmd, cb) {
     var DEBUG = crud.debug;
 
     self.acquireDatabase(crud, function(err, db) {
+
 		if (err) {
 			cb && cb( { status: "failed", err: err });
 			return false
@@ -224,3 +230,5 @@ exports.install = function(crud, feature, cb) {
     })
 
 }
+
+return self;
