@@ -30,6 +30,8 @@ var self = module.exports = {
                 var pkg = JSON.parse(data)
                 assert(pkg.name, "Missing package name");
 
+                var enviro = process.env.NODE_ENV || "development";
+
                 self.announce();
                 bootable.boot(self.BOOT_FILE, _.extend({},argv,pkg), function(err, config) {
                     if (cb_features) {
@@ -46,8 +48,8 @@ var self = module.exports = {
         if (args.length>0) {
             self.announce();
             args.forEach(function(path) {
-                bootable.boot(path+"/"+BOOT_FILE, argv, function(err, config) {
-                    self.start(config, callback)
+                bootable.boot(path, argv, function(err, config) {
+                    bootable.start(config);
                 })
             })
         }
