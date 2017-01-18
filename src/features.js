@@ -55,7 +55,9 @@ self.registerAll = function(features) {
 };
 
 self.get = function(id) {
-	return self.__features[id];
+	var feature = self.__features[id];
+    assert(feature, "Missing feature: "+id);
+    return feature;
 };
 
 self.all = function() {

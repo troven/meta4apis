@@ -87,7 +87,8 @@ self.start = function (config, callback) {
 
 	// configure paths & directories
 	config.basePath = config.basePath || "";
-	config.url = config.url || config.host + ":" + config.port + config.basePath;
+	config.url = config.url || config.protocol+"://"+config.host + ":" + config.port + paths.normalize(config.basePath);
+    debug("base URL: %s", config.url);
 
 	// environmentally friendly
 	process.title = config.name + " on port " + config.port;
@@ -95,7 +96,6 @@ self.start = function (config, callback) {
 		debug("\n[meta4] terminated by user ... au revoir");
 		self.shutdown(config);
 	});
-	debug("sigint registered");
 
 	var app = require("./app")(config);
 
@@ -125,7 +125,7 @@ self.start = function (config, callback) {
 		console.log("NodeJS  :", process.version, "(" + process.platform + ")");
 		console.log("module  :", config.name, "v" + config.version || "0.0.0");
 		var uxPath = self.featured.ux.path + "/";
-		console.log('[meta4] login ->: http://' + paths.normalize(config.url + uxPath), "\n");
+		console.log('[meta4] login ->: ' + paths.normalize(config.url + uxPath), "\n");
 
 		self.emit("start", config);
 		callback && callback(null, config)

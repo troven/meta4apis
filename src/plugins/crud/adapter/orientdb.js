@@ -63,7 +63,7 @@ self.acquireDatabase = function(crud, cb) {
 };
 
 self.close = function(db) {
-    debug("close: %s -> %s", db.name, db.sessionId);
+    // debug("close: %s -> %s", db.name, db.sessionId);
     db.close();
 };
 
@@ -262,6 +262,7 @@ DEBUG && debug("query:",crud.collection, queryName, query, data)
 self.install = function(crud, feature, cb) {
     assert(crud, "Missing CRUD");
     assert(crud.id, "Missing CRUD id");
+//    assert(crud.collection, "Missing CRUD collection");
     assert(crud.adapter, "Missing CRUD options");
     assert(feature, "Missing CRUD feature");
     assert(cb, "Missing CRUD callback");
@@ -277,12 +278,12 @@ self.install = function(crud, feature, cb) {
             return false;
         }
 
-        var classname = crud.collection;
+        var classname = crud.collection || crud.id;
         DEBUG && debug("Installing %s x %s @ %s (schema? %s)", _.keys(crud.defaults).length, classname, crud.adapter.type, crud.schema ? true : false);
 
         db.class.get(classname).then(function () {
 
-            debug("existing class: %s", classname);
+            DEBUG && debug("existing class: %s -> %j", classname, crud.debug);
             self.close(db);
             cb && cb(null, {status: "success", collection: classname});
 

@@ -9,6 +9,7 @@ var _          = require('underscore');     // collections helper
 var assert     = require('assert');         // assertions
 var paths      = require('path');           // file path
 var debug      = require("../debug")("feature:assets");
+var helpers    = require("../helpers");
 
 // =============================================================================
 // meta4 packages
@@ -44,43 +45,29 @@ exports.fn = function(meta4, feature) {
     var DEBUG = feature.debug || false;
 
     var router = meta4.router;
-    var assetHome = paths.normalize(feature.home);
-    debug("%s @ %s", feature.path, assetHome)
+    var assetHome = paths.resolve(feature.home);
+    DEBUG && debug("%s @ %s", feature.path, assetHome)
 
     // =============================================================================
     // application static files
-
-    // support local assets & inferred 'index.html' route
-//    router.use(feature.path, function(req,res,next) {
-////        express.static(assetHome)
-//        debug("ASSET: %s", req.path)
-//    } );
-
 
     // embedded static files from assets.home
 
     router.get('/*', function(req,res,next) {
         var file = req.path;
         if (!file || file == "/") file = "/index.html";
-        file = paths.normalize(assetHome+file)
-//debug("file: %s", file);
-        var insideHomeDir = file.indexOf(assetHome);
 
-//        debug("Asset Found : (%s) %s -> %s -> %s", insideHomeDir, file, assetHome, req.path)
-        if (insideHomeDir == 0) {
-            var stat = fs.existsSync(file)
-            if (stat) {
-                res.sendFile(file, { root: "." } );
-                return;
-            }
-            next && next();
+        file = paths.normalize(assetHome+file)
+        if ( helpers.files.exists(file) ) {
+            DEBUG && debug("local: %s", file);
+            res.sendFile(file);
             return;
         }
-        // illegal path
-        res.sendStatus(404);
+        next && next();
+
     });
 
-    debug("installed %s @ %s", (config.basePath+"/static"), assetHome);
+    DEBUG && debug("installed %s @ %s", (config.basePath+"/static"), assetHome);
 
 
 }

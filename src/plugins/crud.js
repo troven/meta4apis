@@ -72,7 +72,7 @@ self.fn = function(meta4, feature) {
     assert(feature, "{{crud}} feature not configured");
 
     feature.adapters = feature.adapters || { "default": { type: "loki" }};
-    assert(feature.adapters, "{{crud}} adapters not configured")
+    assert(feature.adapters, "{{crud}} adapters not configured");
 
     // =============================================================================
 
@@ -94,10 +94,11 @@ self.fn = function(meta4, feature) {
 
     // prevent multiple init calls
     if (self.models) {
-        debug("Skip re-init CRUD")
-        return
+        debug("Skip re-init CRUD");
+        return;
     }
-    self.models = helper.mvc.reload.models(feature.home, feature)
+
+    self.models = helper.mvc.reload.models(feature.home, feature);
 
     feature.can = _.extend({ download: true, upload: true }, feature.can);
 
@@ -108,11 +109,11 @@ self.fn = function(meta4, feature) {
 
     if (feature.can.upload) {
         // merge local and global upload configuration
-        var feature_upload = _.extend( {}, require('../features').get('upload'), feature.upload )
+        var feature_upload = _.extend( {}, require('../features').get('upload'), feature.upload );
 
         var path = feature.path+'/:collection/_upload_'
-        debug("upload: %s %j", path, feature.can )
-        router.use(path, upload.uploader( feature_upload, meta4) )
+        debug("upload: %s %j", path, feature.can );
+        router.use(path, upload.uploader( feature_upload, meta4) );
 
         if (feature.can.download) {
             // TODO
@@ -131,7 +132,7 @@ self.fn = function(meta4, feature) {
     if (feature.can.install) {
         router.post(feature.path+'/install', function(req, res, next) {
             self.install(feature, function() {
-                res.json()
+                res.json();
             })
         });
     }
@@ -144,7 +145,7 @@ self.fn = function(meta4, feature) {
             models.push(model);
         })
         var meta = _.pick(feature, ["id", "path"]);
-        debug("ABOUT: %j -> %j", req.query, meta)
+        debug("ABOUT: %j -> %j", req.query, meta);
 
         res.json({ data: models, meta: meta } );
     });
@@ -180,7 +181,7 @@ self.fn = function(meta4, feature) {
 
         // execute action and return response
         try {
-            debug("execute: %j -> %j", cmd.action, req.method);
+            debug("execute: %j -> %j -> %j", cmd.action, req.method, id);
             self.execute(cmd, feature, renderResult);
         } catch(e) {
             debug(e);
@@ -210,7 +211,7 @@ self.execute = function(cmd, feature, cb) {
 
     feature.debug && debug("CRUD: %j", crud);
 
-    assert( (cmd.collection == crud.collection), "Mismatched CRUD collection: "+cmd.collection);
+    assert( (cmd.collection == crud.id), "Mismatched collection: "+crud.id+" for "+cmd.collection);
     cmd.query = _.extend({}, cmd.query, crud.queries[cmd.id]);
 
 // acquire CRUD adapter (switchback)
@@ -240,6 +241,7 @@ self.CRUD = function(crud, feature, user) {
     // default CRUD meta-data
     crud = _.extend({ adapter: { type: "default" }, schema: {}, defaults: {}, filters: {}, queries: {} }, crud, crud.server );
     user = user || {};
+    var DEBUG = feature.debug || crud.debug || false;
 
     delete crud.client;
     delete crud.server;
@@ -261,13 +263,13 @@ self.CRUD = function(crud, feature, user) {
 
     // features over-ride model defaults
     crud.adapter = _.extend( crud.adapter, feature.adapters[adapterType]);
+    crud.idAttribute = crud.idAttribute || adapter.idAttribute;
 
     // assign the idAttribute used by Adapter
 
-    assert(adapter.idAttribute, "Missing "+adapterType+" default idAttribute");
-    assert(crud.idAttribute && (adapter.idAttribute != crud.idAttribute), "Mimatched idAttribute: "+crud.idAttribute+" not "+adapter.idAttribute);
+    // assert(adapter.idAttribute, "Missing "+adapterType+" default idAttribute");
+    // assert(crud.idAttribute && (adapter.idAttribute == crud.idAttribute), "Mimatched "+crud.id+" idAttribute: "+crud.idAttribute+" not "+adapter.idAttribute);
 
-    crud.idAttribute = adapter.idAttribute;
 
     // Switchback encapsulates a raw Adapter
     // call before / after functions
@@ -281,20 +283,20 @@ self.CRUD = function(crud, feature, user) {
         },
         create: function (model, cb) {
             model = self.before.create(model, crud, user);
-debug("create (%s): %s -> %j", adapter.create?true:false, crud.collection, model );
+            DEBUG && debug("create (%s): %s -> %j", adapter.create?true:false, crud.collection, model );
             var done = adapter.create ? adapter.create(crud, model, cb) : {}
             //return self.after.create(done, crud, user);
             return done;
         },
         read  : function (cmd, cb) {
             model = self.before.read(cmd, crud, user);
-            debug("read: %s @ %j", crud.id, crud.adapter.type);
+            DEBUG && debug("read: %s @ %j", crud.id, crud.adapter.type);
             var done = adapter.read ? adapter.read(crud, cmd, cb) : []
             //return self.after.read(done, crud, user);
             return done;
         },
         update: function (model, cb) {
-debug("update: %s -> %j", crud.collection, model);
+            DEBUG && debug("update: %s -> %j", crud.collection, model);
             model = self.before.update(model, crud, user);
             done = adapter.update ? adapter.update(crud, model, cb) : {}
 //            done = self.after.update(done, crud, user);
@@ -307,7 +309,7 @@ debug("update: %s -> %j", crud.collection, model);
         },
         find  : function (model, cb) {
             model = self.before.find(model, crud, user);
-            debug("Find: %j %j", model, crud, _.keys(adapter) )
+            DEBUG && debug("Find: %j %j", model, crud, _.keys(adapter) )
             var found = adapter.find ? adapter.find(crud, model, cb) : {};
 //debug("Found: %s -> %j", crud.id, found)
 //			self.after.find(found.data, crud, user);
@@ -399,3 +401,5 @@ self.teardown = function(options) {
         // NOP
     })
 }
+
+return self;

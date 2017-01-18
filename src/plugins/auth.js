@@ -8,6 +8,7 @@ var express         = require('express');        // call express
 var passport        = require('passport')
 var assert          = require('assert');         // assertions
 var debug           = require("../debug")("feature:oauth");
+var paths           = require("path");
 
 // =============================================================================
 // meta4 packages
@@ -42,7 +43,7 @@ self.fn = function(meta4, feature) {
 
 	var config = meta4.config
 
-	var DEBUG = feature.debug || false
+	var DEBUG = feature.debug || false;
 
 	if (self._isInstalled) {
 		debug("Skip re-init AUTH")
@@ -65,10 +66,11 @@ self.fn = function(meta4, feature) {
         }
     }, feature);
 
-    debug("common %s paths: %j", feature.path, feature.paths);
+    DEBUG && debug("common %s paths: %j", feature.path, feature.paths);
 
-    var basePath = config.basePath
-    var failureFlash = false
+    var basePath = config.url+feature.path.substring(1);
+    var failureFlash = false;
+
     var redirectOptions = {
         signupRedirect: basePath+feature.paths.signup,
         successRedirect: basePath+feature.paths.home,
@@ -76,18 +78,18 @@ self.fn = function(meta4, feature) {
         failureFlash: failureFlash
     }
 
-    debug("login paths: %j", redirectOptions)
+    DEBUG && debug("login paths: %j", redirectOptions)
 
     // =============================================================================
 	// Manage session with Passport
 
     var router = meta4.router || express.Router();
 
-    router.use(passport.initialize());
-    router.use(passport.session());
-    meta4.app.use(feature.path, router);
+    router.use( passport.initialize() );
+    router.use( passport.session() );
+    meta4.app.use( feature.path, router );
 
-    debug("Authenticate: %s", feature.path)
+    DEBUG && debug("Authenticate: %s", feature.path)
 
 	// CRUD-based Authentication
 
@@ -96,10 +98,11 @@ self.fn = function(meta4, feature) {
 	var strategy = new LocalStrategy(
 		function(username, password, done) {
 
-            var models = meta4.features.get("crud").fn;
-
+            var models = meta4.features.get("crud");
+debug("features: %j -> %s", _.keys(models), models.fn);
 			// Identify & retrieve user
-			var user = { username: username, password: password }
+			var user = { username: username, password: password };
+			debug("login: %s -> %s", username, password);
 
             models.execute("find", collection, user , function(found) {
 				if (!found.data || !found.data.roles || found.data.password!=user.password) {
@@ -144,15 +147,15 @@ self.fn = function(meta4, feature) {
 
 	function EnsureAuthorized(options, req, res, next) {
 		if (options && options.roles) {
-s
+
 			if (!req.user.roles) {
 				// no user roles - denied
-				res.redirect(redirectOptions.failureRedirect)
+				res.redirect(redirectOptions.failureRedirect);
 				return false
 			}
 
 			var rolesAllowed = CompareRoles(options.roles, req.user.roles)
-debug("auth roles", rolesAllowed, options.roles, req.user.roles)
+            DEBUG && debug("auth roles", rolesAllowed, options.roles, req.user.roles)
 
 			if ( !rolesAllowed ) {
 				// no valid roles - denied
@@ -179,7 +182,7 @@ debug("auth roles", rolesAllowed, options.roles, req.user.roles)
 
 	/* Handle home GET - if logged-in */
 	router.get(feature.paths.home, function(req, res, next) {
-debug("HOME")
+        DEBUG && debug("HOME");
 		var isLoggedIn = EnsureAuthenticated(req, res);
         if (isLoggedIn) {
             res.render(redirectOptions.successRedirect.substring(1));
@@ -192,10 +195,11 @@ debug("HOME")
 	router.get(feature.paths.login, function(req, res) {
 
 		if (!req.isAuthenticated()) {
-debug("LOGIN: %s", redirectOptions.failureRedirect)
-            res.render(redirectOptions.failureRedirect.substring(1), {})
+            var path = redirectOptions.failureRedirect;
+            DEBUG && debug("NEED LOGIN: %s", path, feature.paths.login);
+            res.render("login.html", {})
 		} else {
-debug("LOGGED IN: %s", redirectOptions.successRedirect)
+            DEBUG && debug("LOGGED IN: %s", redirectOptions.successRedirect)
 			res.redirect(redirectOptions.successRedirect);
 		}
 	});
@@ -208,7 +212,7 @@ debug("LOGGED IN: %s", redirectOptions.successRedirect)
 	    meta4.vents.emit(feature.id+":login", req.user);
 
         var redirectTo = req.session.redirectTo || redirectOptions.successRedirect;
-        debug("LOGIN [post]: %s", redirectTo)
+        DEBUG && debug("LOGIN [post]: %s", redirectTo)
         res.redirect(redirectTo);
     });
 
@@ -219,7 +223,7 @@ debug("LOGGED IN: %s", redirectOptions.successRedirect)
 		meta4.vents.emit(feature.id, "logout", req.user);
 		meta4.vents.emit(feature.id+":logout", req.user);
 
-        debug("LOGOUT: %s", redirectOptions.failureRedirect)
+        DEBUG && debug("LOGOUT: %s", redirectOptions.failureRedirect)
 		req.logout();
 		res.redirect(redirectOptions.failureRedirect);
 	});
@@ -228,7 +232,7 @@ debug("LOGGED IN: %s", redirectOptions.successRedirect)
 
     /* Handle Registration GET */
     router.get(feature.paths.signup, function(req, res) {
-debug("SIGN-UP")
+        DEBUG && debug("SIGN-UP")
         res.redirect(redirectOptions.signupRedirect)
     });
 
@@ -257,13 +261,13 @@ debug("SIGN-UP")
 
         // only features that have defined 'path' AND 'roles'
         if (!options.roles || !path) {
-            debug("missing %s roles: %s", key)
+            debug("missing %s roles for %s", key, path);
             return;
         }
 
-        debug("protect: %s @ %s", key, path)
+        DEBUG && debug("protect: %s @ %s", key, path)
         router.use(path, function(req,res,next) {
-            debug("PROTECTED: %s @ %s -> %j", path, req.path, options.roles);
+            DEBUG && debug("PROTECTED: %s @ %s -> %j", path, req.path, options.roles);
             EnsureAuthenticated(req, res, false) && EnsureAuthorized(options, req, res, next)
         })
     }
@@ -273,6 +277,6 @@ debug("SIGN-UP")
     _.each(meta4.features.all(), ProtectRoute)
 	_.each(feature.protected, ProtectRoute )
 
-    debug("installed");
+    debug("installed: %s", basePath);
 
 }

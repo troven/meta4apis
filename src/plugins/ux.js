@@ -9,6 +9,7 @@ var assert     = require('assert');         // assertions
 var express    = require('express');        // call express
 var _          = require('underscore');     // collections helper
 var debug      = require('../debug')("ux"); // debug
+var helpers    = require("../helpers");
 
 // =============================================================================
 // meta4 packages
@@ -45,16 +46,17 @@ exports.fn = function(meta4, feature) {
         home: meta4ux.resolve(),
         crud: {},
         paths: {
-            models: config.home+"/models",
-            data: config.home+"/data",
-            templates: config.home+"/templates/client",
-            scripts: config.home+"/scripts",
-            views: config.home+"/views"
+            models: paths.normalize(config.home+"/models"),
+            data: paths.normalize(config.home+"/data"),
+            templates: paths.normalize(config.home+"/templates/client"),
+            scripts: paths.normalize(config.home+"/scripts"),
+            views: paths.normalize(config.home+"/views")
         }
     }, feature);
 
     // CRUD path for UX
     feature.crud = feature.crud || self.__features.crud.path;
+    var DEBUG = feature.debug || false;
 
 // =============================================================================
 
@@ -78,7 +80,11 @@ exports.fn = function(meta4, feature) {
             "isServer", "isClient", "can", "prefetch", "debug", "idAttribute", "type", "defaults" ]);
     });
 
-	debug("UX path: ", feature.path, _.keys(self.cache) );
+//	debug("UX path: ", feature.path, _.keys(self.cache) );
+
+    var assetHome = paths.resolve(paths.normalize(feature.home));
+    debug("home: %s", assetHome);
+    var defaultHome = paths.normalize(meta4ux.resolve());
 
     // server UX definitions
     router.get(feature.path+"/view/:id?", function(req, res) {
@@ -105,6 +111,9 @@ exports.fn = function(meta4, feature) {
 
         recipe.url = host+":"+port+config.basePath;
 
+        // default user
+        recipe.user = { id: false, name: "Anonymous" };
+
         // filter server-side config
         _.each(recipe.models, function(model) {
             _.extend(model, model.client);
@@ -113,7 +122,7 @@ exports.fn = function(meta4, feature) {
             delete model.client;
         });
 
-        feature.debug && debug("view: %j", recipe);
+//        feature.debug && debug("view: %j", recipe);
 
         // vent our intentions
 	    meta4.vents.emit(feature.id, "home", req.user||false, recipe||false);
@@ -128,29 +137,24 @@ exports.fn = function(meta4, feature) {
 
     });
 
-    if (feature.home) {
-        var assetHome = paths.normalize(feature.home);
-        debug("custom assets: %s", assetHome);
+    router.get(feature.path+'/*', function(req,res,next) {
 
-        // embedded static UX files
-        router.get(feature.path+'/*', function(req,res,next) {
+        var file = paths.normalize(assetHome+req.path);
+        if ( helpers.files.exists(file) ) {
+            //feature.debug &&
+            DEBUG && debug("local: %s", file);
+            res.sendFile(file);
+            return;
+        }
+        file = paths.normalize(defaultHome+req.path);
+        if ( helpers.files.exists(file) ) {
+            //feature.debug &&
+            DEBUG && debug("default: %s", file);
+            res.sendFile(file);
+            return;
+        }
 
-            var file = paths.normalize(assetHome+req.path);
-            feature.debug && debug("static: %s", file);
+        next && next();
 
-            var insideHomeDir = file.indexOf(assetHome);
-            if (insideHomeDir == 0) {
-                var stat = fs.existsSync(file);
-//            console.log("UX Asset: (%s) %s -> %s -> %s %j", insideHomeDir, file, assetHome, req.path, stat)
-                if (stat) {
-                    res.sendFile(file);
-                    return;
-                }
-                next && next();
-            } else {
-                debug("missing: %s", file);
-                res.sendStatus(404);
-            }
-        });
-    }
+    });
 };

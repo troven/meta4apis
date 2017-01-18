@@ -15,6 +15,7 @@ module.exports = function(config) {
     var SESSION_SECRET = config.salt || config.name+"_"+new Date().getTime();
     var app             = express();                    // create app using express
 
+    _.defaults(config, require("./defaults"));
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(bodyParser.json());
 
