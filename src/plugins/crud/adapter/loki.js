@@ -39,7 +39,7 @@ self.acquireDatabase = function(crud, cb) {
     assert(cb, "Missing CRUD callback: "+crud.id);
     assert(_.isFunction(cb), "Missing CRUD callback: "+crud.id);
 
-	var home = crud.home || crud.adapter.home;
+	var home = crud.home || crud.adapter.home || "./tmp/data";
     assert(home, "Loki CRUD @"+crud.id+" is missing home");
 
     var DEBUG = crud.debug;
