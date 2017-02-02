@@ -1,6 +1,6 @@
 {
   "name": "meta4apis",
-  "version": "0.8.13",
+  "version": "0.8.14",
   "description": "meta4 API micro-service",
   "scripts": {
     "start": "node src/index.js"
