@@ -109,7 +109,7 @@ exports.fn = function(meta4, feature) {
 	    recipe.home = "views:home";
 	    recipe.id = req.params.id || config.name;
 
-        recipe.url = (config.url || host+":"+port)+config.basePath;
+        recipe.url = config.url || (host+":"+port+config.basePath);
 
         // default user
         recipe.user = { id: false, name: "Anonymous" };

@@ -16,7 +16,7 @@ var helper     = require('meta4common');   // files & mixins
 var upload      = require('./upload');        // uploads & attachments
 
 var ID_ATTRIBUTE    = "id"
-var HTTP_TO_CRUD = { "POST": "create", "GET": "read", "PUT": "update", "DELETE": "delete"}
+var HTTP_TO_CRUD = { "POST": "create", "GET": "read", "PUT": "update", "DELETE": "delete", "OPTIONS": "options" }
 
 // =============================================================================
 // Configure CRUD Feature
@@ -76,6 +76,7 @@ self.fn = function(meta4, feature) {
 
     // =============================================================================
 
+    var DEBUG = feature.debug?true:false;
     var config = meta4.config, router = meta4.router;
     assert(config.home, "Missing config home");
 
@@ -88,7 +89,7 @@ self.fn = function(meta4, feature) {
 
 
     // app.use(config.basePath, router)
-    debug("CRUD @ %s -> %s", config.basePath, feature.path);
+    DEBUG && debug("CRUD @ %s -> %s", config.basePath, feature.path);
 
     // =============================================================================
 
@@ -105,7 +106,7 @@ self.fn = function(meta4, feature) {
     self.options = _.extend({ adapters: { default: {} }}, feature );
     self.options.adapters = _.extend({ default: {} }, self.options.adapters );
 
-    debug("adapters: %j", _.keys(self.options.adapters));
+    DEBUG && debug("adapters: %j", _.keys(self.options.adapters));
 
     if (feature.can.upload) {
         // merge local and global upload configuration
@@ -126,6 +127,8 @@ self.fn = function(meta4, feature) {
     }
 
     _.each(self.models, modelDefaults);
+
+    debug("CRUD collections: %o", _.keys(self.models));
 
     self.install(feature, function() {} );
 
@@ -166,28 +169,34 @@ self.fn = function(meta4, feature) {
         var cmd = _.extend({
             action: HTTP_TO_CRUD[req.method],
             collection: collection, id: id,
-            options: {
-                home: feature.home || config.data
-            },
+            // options: {
+            //     home: feature.home || config.data
+            // },
             query: req.query,
             data: req.body
         });
 
         var renderResult = function (err, result) {
             assert(!err, "CRUD: "+err);
-            debug("%s x results for %s %s", result.data.length, cmd.action, cmd.collection);
+            DEBUG && debug("%s x results for %s %s", result.data.length, cmd.action, cmd.collection);
             res.json(result);
         };
 
         // execute action and return response
         try {
-            debug("execute: %j -> %j -> %j", cmd.action, req.method, id);
+            DEBUG && debug("execute: %j -> %j -> %j", cmd.action, req.method, id);
             self.execute(cmd, feature, renderResult);
         } catch(e) {
             debug(e);
             res.status(500).send(e);
         }
+
     });
+
+    return { execute: function(cmd, cb) {
+debug("EXECUTE: %s %j", feature.id, cmd);
+        self.execute(cmd, feature, cb);
+    }} ;
 }
 
 self.get = function(collection, feature) {
@@ -223,8 +232,10 @@ self.execute = function(cmd, feature, cb) {
     assert(_.isFunction(action), "meta4:crud:action:invalid#"+cmd.action);
 
     // execute action and return response
-    action(cmd, cb);
+    cb && action(cmd, cb);
 
+    // otherwise, we have the raw action
+    return action;
 }
 // =============================================================================
 // A factory method turn a crud-model definition into an adapter-specific CRUD Object
@@ -277,6 +288,9 @@ self.CRUD = function(crud, feature, user) {
     var CRUD = {
         test: function (config, cb) {
             return adapter.selftest ? adapter.selftest(crud, feature, cb) : false;
+        },
+        options: function (config, cb) {
+//            cb && cb({ });
         },
         install: function (config, cb) {
             return adapter.install ? adapter.install(crud, feature, cb) : false;

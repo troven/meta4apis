@@ -39,11 +39,10 @@ self.acquireDatabase = function(crud, cb) {
     assert(cb, "Missing CRUD callback: "+crud.id);
     assert(_.isFunction(cb), "Missing CRUD callback: "+crud.id);
 
-	var home = crud.home || crud.adapter.home || "./tmp/data";
-    assert(home, "Loki CRUD @"+crud.id+" is missing home");
+	var home = crud.adapter.home || crud.home;
+    assert(home, "Loki CRUD @ "+crud.id+" is missing home");
 
-    var DEBUG = crud.debug;
-
+    var DEBUG = crud.debug?true:false;
 
 	// underlying database
 
@@ -51,7 +50,7 @@ self.acquireDatabase = function(crud, cb) {
 	if (db) {
 		// already initialized ..
 		cb && cb(null, db)
-	    return
+	    return;
 	}
 
 	// initialize database
@@ -60,7 +59,9 @@ self.acquireDatabase = function(crud, cb) {
 	// file management
 //	crud.adapter.database.name
     helper.files.mkdirs(home);
-	var filename = paths.normalize(home+"/"+crud.id+".json");
+	var filename = paths.resolve(paths.normalize(home+"/"+crud.id+".json"));
+    DEBUG && debug("%s @ %j --> %s", crud.id, home, filename);
+
 
     // load Loki - callback when done
     db = exports._db[crud.id] = new loki( filename, { autoload: true, autosave: true, autosaveInterval: autosaveInterval,
@@ -81,7 +82,7 @@ exports.create = function(crud, cmd, cb) {
 	self.acquireDatabase(crud, function(err, db) {
 		if (err) {
 			cb && cb( { status: "failed", err: err });
-			return false
+			return false;
 		}
 
 //		debug("create:",crud.id, cmd.data);
@@ -111,7 +112,7 @@ exports.read = function(crud, cmd, cb) {
     assert(crud.adapter.type, "Invalid adapter");
     assert(crud.adapter.home, "Missing loki home");
 
-    var DEBUG = crud.debug;
+    var DEBUG = crud.debug?true:false;
 
 	self.acquireDatabase(crud, function(err, db) {
 
@@ -121,11 +122,9 @@ exports.read = function(crud, cmd, cb) {
 		}
 		assert(db, "Missing loki database: "+crud.id);
 
-        DEBUG && debug("read %s @ %j", crud.id, crud.adapter.home);
-
-		var collection = self.getCollection(crud, db);
+  		var collection = self.getCollection(crud, db);
         if (!collection) {
-            cb && cb( { status: "failed" , err: "missing "+crud.id });
+            cb && cb( { status: "failed" , err: "missing "+crud.id } );
             return;
         }
         assert(collection.name==crud.id, "Collection name mismatched: "+collection.name);
@@ -133,7 +132,8 @@ exports.read = function(crud, cmd, cb) {
         var where = _.extend({}, cmd.where, crud.where);
         var filters = _.extend({}, cmd.filters, crud.filters);
 
-		var found = where?collection.find(where):collection.data;
+        DEBUG && debug("read %s", crud.id);
+        var found = where?collection.find(where):collection.data;
         found = found || [];
         DEBUG && debug("found %s x %s", found.length, crud.id);
 
@@ -147,7 +147,7 @@ exports.read = function(crud, cmd, cb) {
 
 exports.update = function(crud, cmd, cb) {
 
-    var DEBUG = crud.debug;
+    var DEBUG = crud.debug?true:false;
 
     self.acquireDatabase(crud, function(err, db) {
 
@@ -173,7 +173,7 @@ exports.update = function(crud, cmd, cb) {
 
 exports.delete = function(crud, cmd, cb) {
 
-    var DEBUG = crud.debug;
+    var DEBUG = crud.debug?true:false;
 
     self.acquireDatabase(crud, function(err, db) {
 
@@ -202,10 +202,10 @@ exports.install = function(crud, feature, cb) {
     assert(cb, "Missing CRUD callback: "+crud.id);
     assert(_.isFunction(cb), "Invalid CRUD callback: "+crud.id);
 
-    var DEBUG = crud.debug;
+    var DEBUG = crud.debug?true:false;
 
     if (!crud.defaults) {
-        return;
+         return;
     };
 
     self.acquireDatabase(crud, function(err, db) {
@@ -217,18 +217,28 @@ exports.install = function(crud, feature, cb) {
         crud.defaults = crud.defaults || [];
         var collection = self.getCollection(crud, db);
         if (!collection.count()) {
-            _.each(crud.defaults, function(data) {
-// debug("%s default: %j", crud.id, data)
-                collection.insert(data);
-            })
-            DEBUG && debug("installed: %s x %s models", _.keys(crud.defaults).length, crud.id);
+            DEBUG && debug("installing: %s from %o ", crud.id, crud.defaults);
+
+            if (_.isString(crud.defaults)) {
+                helper.files.parse(crud.defaults, function(file, json) {
+                    DEBUG && debug("installed x %s models from : %s as %s", _.keys(json).length, file, crud.id);
+                    _.each(json, function(data) {
+                        collection.insert(data);
+                    });
+                });
+            }
+
+            if (_.isArray(crud.defaults)) {
+                _.each(crud.defaults, function(data) {
+                    collection.insert(data);
+                });
+                DEBUG && debug("installed: %s x %s models", _.keys(crud.defaults).length, crud.id);
+            }
         }
 
         // we're done
         cb && cb(null, { status: "pending", data: crud.defaults, meta: {  } })
-
     })
-
 }
 
 return self;

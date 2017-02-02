@@ -53,6 +53,12 @@ module.exports = function(config) {
     return {
         app: app,
         router: router,
+        Router: function(path) {
+            var router = express.Router();
+            app.use(router);
+            debug("New router");
+            return router;
+        },
         express: express
     };
 }

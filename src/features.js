@@ -31,7 +31,7 @@ self.register = function(key, options) {
 
     options.id = options.id || key;
 
-    var feature = self.__features[options.id] = _.extend({},self.__features[options.id], options);
+    var feature = self.__features[options.id] = _.defaults(options, self.__features[options.id]);
 
     if (!(feature.path === false)) {
         feature.path = feature.path || "/"+feature.id;
@@ -39,7 +39,7 @@ self.register = function(key, options) {
 
     feature.plugin = feature.plugin || feature.id;
 
-debug("plugin %s = %s @ %s", feature.plugin, feature.id, feature.path);
+debug("plugin %s = %s @ %s -> %j", feature.plugin, feature.id, feature.path, _.keys(feature));
     return feature;
 };
 
@@ -77,23 +77,16 @@ self.boot = function(meta4, plugins) {
     assert(config.home, "Feature.configure is missing {{home}}")
     assert(config.basePath, "Missing config.basePath");
 
-    if (!self.__features) throw new Error("No Features to configure")
+    if (!self.__features) throw new Error("Features not initialized")
+    if (!config.features) throw new Error("No features - not a viable app")
 
-    // merge feature with runtime options
+    // register feature from config
+
     _.each(config.features, function(options, key) {
         options.id = options.id || key;
         debug("register: %s", options.id);
         self.register(options.id, options );
     })
-
-    // force minimal defaults
-    var i = 0;
-    _.each(self.__features, function(options, key) {
-        options.id = options.id || key;
-        options.order = options.order?options.order:1000+(i++);
-        options.basePath = options.basePath || config.basePath + (options.path || options.id );
-        options.basePath = paths.normalize(options.basePath);
-    });
 
     // match longest (most specific) paths first
     var sorted = _.sortBy( _.values(self.__features) , function(a) { return a.order })
@@ -108,7 +101,7 @@ self.boot = function(meta4, plugins) {
     // naively prioritize routes based - shortest paths first
     _.each( sorted, function(options) {
         if (!options.configured) {
-            var configured = self._configureFeature(meta4, options);
+            self._configureFeature(meta4, options);
         }
     });
 
@@ -126,36 +119,43 @@ self._configureFeature = function(meta4, options) {
     assert(meta4, "Missing meta4 core");
     assert(meta4.plugins, "Missing meta4 plugins");
     if (!options) return;
+//    assert(options, "Missing feature config");
+
+    options.order = options.order?options.order:1000;
+    options.basePath = options.basePath || meta4.config.basePath + (options.path || options.id );
+    options.basePath = paths.normalize(options.basePath);
 
     var _plugin = options.plugin || options.id;
     assert (!plugin || _.isString(plugin), "Invalid plugin");
     var plugin = _plugin?meta4.plugins.get(_plugin):false;
+    assert(plugin, "Feature is not a plugin: "+_plugin);
 
-    var _options = _.extend( _.omit(plugin, ["fn"]), options );
-
-    assert(_options, "Missing feature options");
-    assert(_options.id, "Missing feature id");
+    assert(options, "Missing feature options");
+    assert(options.id, "Missing feature id");
     if (options.disabled) {
         debug("disabled: %s", options.id);
         return;
     }
 
-    _options.can = _.extend( { read: true }, _options.can);
+    options.can = _.extend( { read: true }, options.can);
 
-    if (_options.home) {
-        helpers.files.mkdirs(_options.home);
-        debug("create %s folder: %s", _options.id, _options.home);
+    if (options.home) {
+        helpers.files.mkdirs(options.home);
+        debug("create %s folder: %s", options.id, options.home);
     }
 
+    // keep reference to our construction / default instance
+
     if (_.isFunction(plugin.fn)) {
-        debug("boot %s", options.id);
-        plugin.fn.apply(_options, [meta4, _options]);
+        var configured = plugin.fn.apply(options, [meta4, options]);
+        _.extend(options, configured );
+        debug("boot %s -> %j", options.id, _.keys(options));
     } else {
         throw "meta4:oops:plugin#missing-fn()@"+_plugin;
     }
 
     options.configured = true;
-    return _options;
+    return options;
 };
 
 self.teardown = function(options) {

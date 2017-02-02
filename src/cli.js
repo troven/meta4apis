@@ -26,9 +26,18 @@ var self = module.exports = {
         if (args.length==0) {
             var path = "package.json";
             fs.readFile(path, function(err,data) {
-                assert(!err, "missing {{package.json}}");
-                var pkg = JSON.parse(data)
-                assert(pkg.name, "Missing package name");
+                if (err) {
+                    console.log("missing 'package.json' - this is not a NodeJS project");
+                    return;
+                };
+                var pkg = false;
+                try {
+                    pkg = JSON.parse(data)
+                    assert(pkg.name, "Missing package name");
+                } catch(e) {
+                    console.log("Broken JSON config file: %s has errors:", path, e);
+                    return;
+                }
 
                 var enviro = process.env.NODE_ENV || "development";
 

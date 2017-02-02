@@ -53,7 +53,11 @@ self.boot = function (filename, options, callback) {
 
 	// read meta4 boot file
 	fs.readFile(filename, function (error, data) {
-		assert(!error, "Failed to boot:" + filename);
+		if (error)  {
+		    console.log("Failed to load config: %s", filename);
+            callback && callback(error);
+            return;
+        }
 		var config = JSON.parse(data);
 		config.home = paths.normalize(paths.dirname(filename) + "/" + config.home);
 
@@ -100,14 +104,19 @@ self.start = function (config, callback) {
 	var app = require("./app")(config);
 
 	// configure meta4 features
-	var meta4 = {
+	var meta4 = _.extend({
+	    _: _,
+        __: __,
+        pkg: require("../package.json"),
+        Debug: require("./debug"),
 		app: app.app,
+        Router: app.Router,
 		router: app.router,
 		config: config,
 		vents: self,
 		features: self.features,
 		plugins: self.plugins
-	};
+	});
 
 	var plugins = self.plugins.boot(meta4);
 	debug("plugins activated: %j", _.keys(plugins));
@@ -123,9 +132,10 @@ self.start = function (config, callback) {
 		// we're good to go ...
 		console.log("----------------------------------------");
 		console.log("NodeJS  :", process.version, "(" + process.platform + ")");
-		console.log("module  :", config.name, "v" + config.version || "0.0.0");
+        console.log("meta4   :",   meta4.pkg.version );
+		console.log("instance:", config.name, "v" + config.version || "0.0.0");
 		var uxPath = self.featured.ux.path + "/";
-		console.log('[meta4] login ->: ' + paths.normalize(config.url + uxPath), "\n");
+		console.log('[meta4] login ->: ' + config.url + uxPath, "\n");
 
 		self.emit("start", config);
 		callback && callback(null, config)
