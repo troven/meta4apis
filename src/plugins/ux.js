@@ -137,6 +137,10 @@ exports.fn = function(meta4, feature) {
 
     });
 
+    router.post(feature.path+'/*', function(req,res,next) {
+        res.redirect(feature.path+"/");
+    });
+
     router.get(feature.path+'/*', function(req,res,next) {
 
         var file = paths.normalize(assetHome+req.path);
