@@ -221,7 +221,8 @@ exports.install = function(crud, feature, cb) {
 
             if (_.isString(crud.defaults)) {
                 helper.files.parse(crud.defaults, function(file, json) {
-                    DEBUG && debug("installed x %s models from : %s as %s", _.keys(json).length, file, crud.id);
+                    //DEBUG &&
+                    debug("installed x %s models from : %s as %s", _.keys(json).length, file, crud.id);
                     _.each(json, function(data) {
                         collection.insert(data);
                     });
