@@ -5,6 +5,7 @@ module.exports = {
     brand: require("./plugins/brand"),
     clicktrack: require("./plugins/clicktrack"),
     crud: require("./plugins/crud"),
+    keycloak: require("./plugins/keycloak"),
     emailer: require("./plugins/emailer"),
     machine: require("./plugins/machine"),
     pages: require("./plugins/pages"),

@@ -83,7 +83,16 @@ exports.fn = function(meta4, feature) {
 //	debug("UX path: ", feature.path, _.keys(self.cache) );
 
     var assetHome = paths.resolve(paths.normalize(feature.home));
-    debug("home: %s", assetHome);
+    debug("UX home: %s", assetHome);
+
+    var meta4Home = paths.resolve(paths.normalize(config.home));
+    debug("meta4 home: %s", meta4Home);
+
+    assert(meta4Home, "feature is missing {{meta4.home}}");
+    var meta4json = paths.resolve(paths.normalize(meta4Home)+"/meta4.json");
+
+    debug("meta4 JSON: %s", meta4json);
+
     var defaultHome = paths.normalize(meta4ux.resolve());
 
     // server UX definitions
@@ -101,6 +110,7 @@ exports.fn = function(meta4, feature) {
         var recipe = _.extend({}, self.cache);
 
 	    // server-side features
+        recipe.meta4 = helpers.files.config(meta4json, { client: {} }).client;
 	    recipe.server = {};
 	    recipe.server.socketio = meta4.io?{ enabled: true }:{ enabled: false };
 	    recipe.server.remote = meta4.router?{ enabled: true }:{ enabled: false };
@@ -108,17 +118,22 @@ exports.fn = function(meta4, feature) {
 	    // Localise recipe
 	    recipe.home = "views:home";
 	    recipe.id = req.params.id || config.name;
-
         recipe.url = config.url || (host+":"+port+config.basePath);
 
         // default user
         recipe.user = { id: false, name: "Anonymous" };
 
+        // pass any state to client
+        recipe.scope = {};
+
         // filter server-side config
         _.each(recipe.models, function(model) {
             _.extend(model, model.client);
-            delete model.server;
+            if (_.isString(model.defaults)) delete model.defaults;
+            model.url = model.url || recipe.url+feature.modelPath+"/"+model.id;
+
             delete model.adapter;
+            delete model.server;
             delete model.client;
         });
 
@@ -127,11 +142,6 @@ exports.fn = function(meta4, feature) {
         // vent our intentions
 	    meta4.vents.emit(feature.id, "home", req.user||false, recipe||false);
 	    meta4.vents.emit(feature.id+":home", req.user||false, recipe||false);
-
-	    // rewrite model URLs
-	    _.each(recipe.models, function(model) {
-		    model.url = model.url || recipe.url+feature.modelPath+"/"+model.id;
-	    });
 
 	    res.json(recipe);
 
